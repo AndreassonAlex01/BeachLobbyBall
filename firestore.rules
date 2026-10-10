@@ -87,5 +87,61 @@ service cloud.firestore {
     match /users/{uid}/blocked/{blockedUid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    function isAccount() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Public profiles, readable by anyone signed in. Only accounts have one.
+    match /profiles/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if isAccount() && request.auth.uid == uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 30
+        && request.resource.data.nameLower == request.resource.data.name.lower();
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Exact-email lookup. You can read an entry only if you already know the email.
+    match /emailIndex/{email} {
+      allow get: if request.auth != null;
+      allow create, update: if isAccount()
+        && request.resource.data.uid == request.auth.uid
+        && request.auth.token.email is string
+        && email == request.auth.token.email.lower().replace('/', '_');
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // Friend requests, stored as {fromId}_{toId}.
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null
+        && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
+      allow create: if isAccount()
+        && request.resource.data.fromId == request.auth.uid
+        && request.resource.data.toId != request.auth.uid
+        && requestId == request.auth.uid + '_' + request.resource.data.toId;
+      // The sender can cancel and the receiver can decline or accept.
+      allow delete: if request.auth != null
+        && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
+    }
+
+    // Friend lists. Tags on a friend are private to the list's owner.
+    match /users/{uid}/friends/{friendUid} {
+      allow read, update: if request.auth != null && request.auth.uid == uid;
+
+      // Accepting a request from friendUid to uid writes both sides at once,
+      // so the accepter may also create the entry in the sender's list.
+      allow create: if request.auth != null && (
+        (request.auth.uid == uid
+          && exists(/databases/$(database)/documents/friendRequests/$(friendUid + '_' + uid)))
+        || (request.auth.uid == friendUid
+          && request.resource.data.tags.size() == 0
+          && exists(/databases/$(database)/documents/friendRequests/$(uid + '_' + friendUid)))
+      );
+
+      // Either friend can end the friendship.
+      allow delete: if request.auth != null && (request.auth.uid == uid || request.auth.uid == friendUid);
+    }
   }
 }

@@ -33,6 +33,7 @@ fun App() {
                 Session.SignedOut -> WelcomeScreen(auth)
                 is Session.SignedIn -> MainScreen(
                     user = s.user,
+                    auth = auth,
                     onSignOut = { scope.launch { auth.signOut() } },
                 )
             }

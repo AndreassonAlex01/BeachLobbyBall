@@ -41,8 +41,10 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.chat.ChatRepository
+import se.beachlobbyball.app.friends.Relation
 import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
 
 private sealed interface DetailState {
@@ -59,6 +61,8 @@ fun LobbyDetailScreen(
     repository: LobbyRepository,
     chat: ChatRepository,
     blockedIds: Set<String>,
+    relationTo: (String) -> Relation,
+    onAddFriend: (Player) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,7 +95,7 @@ fun LobbyDetailScreen(
                 if (showChat) {
                     ChatPanel(s.lobby, user, chat, blockedIds)
                 } else {
-                    LobbyDetails(s.lobby, user, repository, onDeleted = onBack)
+                    LobbyDetails(s.lobby, user, repository, relationTo, onAddFriend, onDeleted = onBack)
                 }
             }
         }
@@ -108,6 +112,8 @@ private fun LobbyDetails(
     lobby: Lobby,
     user: AppUser,
     repository: LobbyRepository,
+    relationTo: (String) -> Relation,
+    onAddFriend: (Player) -> Unit,
     onDeleted: () -> Unit,
 ) {
     val timeZone = remember { TimeZone.currentSystemDefault() }
@@ -162,14 +168,31 @@ private fun LobbyDetails(
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Players", style = MaterialTheme.typography.titleMedium)
         lobby.players.forEach { player ->
-            Text(
-                buildString {
-                    append(player.name)
-                    if (lobby.isHost(player.uid)) append(" (host)")
-                    if (player.uid == user.uid) append(" (you)")
-                },
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    buildString {
+                        append(player.name)
+                        if (lobby.isHost(player.uid)) append(" (host)")
+                        if (player.uid == user.uid) append(" (you)")
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                // Guests can't have friends, so they don't get the button.
+                if (!user.isGuest) {
+                    when (relationTo(player.uid)) {
+                        Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
+                        Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Relation.RequestReceived -> Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Relation.Self -> Unit
+                    }
+                }
+            }
         }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))

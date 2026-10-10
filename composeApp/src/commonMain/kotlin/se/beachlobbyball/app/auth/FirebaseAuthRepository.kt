@@ -43,6 +43,12 @@ class FirebaseAuthRepository : AuthRepository {
         profileVersion.value++
     }
 
+    override suspend fun updateName(name: String) = mapErrors {
+        val user = auth.currentUser ?: throw AuthException(GENERIC_ERROR)
+        user.updateProfile(displayName = name.trim())
+        profileVersion.value++
+    }
+
     override suspend fun signOut() {
         auth.signOut()
     }
@@ -51,6 +57,7 @@ class FirebaseAuthRepository : AuthRepository {
         uid = uid,
         displayName = displayName?.takeIf { it.isNotBlank() } ?: email ?: "Player",
         isGuest = isAnonymous,
+        email = email,
     )
 
     private inline fun mapErrors(block: () -> Unit) {
