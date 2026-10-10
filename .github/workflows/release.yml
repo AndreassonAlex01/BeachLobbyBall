@@ -1,0 +1,43 @@
+name: Release build
+
+# Builds the app bundle to upload to Google Play, signed with the upload key.
+# Needs the UPLOAD_KEYSTORE_BASE64 and UPLOAD_KEYSTORE_PASSWORD repository secrets.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.UPLOAD_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Skip without the upload key
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::Add the UPLOAD_KEYSTORE_BASE64 and UPLOAD_KEYSTORE_PASSWORD secrets to build a Play release."
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.HAS_KEY == 'true'
+      - name: Build signed bundle
+        if: env.HAS_KEY == 'true'
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          # Play needs a higher number for every upload.
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          echo "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          export UPLOAD_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          ./gradlew :composeApp:bundleRelease
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          name: beachlobbyball-release-aab
+          path: composeApp/build/outputs/bundle/release/*.aab
