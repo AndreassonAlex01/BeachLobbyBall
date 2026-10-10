@@ -11,9 +11,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -142,12 +145,15 @@ private fun LobbyDetails(
     var error by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var inviting by remember { mutableStateOf(false) }
+    var removing by remember { mutableStateOf<Player?>(null) }
     val isHost = lobby.isHost(user.uid)
     val isPlayer = lobby.hasPlayer(user.uid)
+    val isWaiting = lobby.isWaiting(user.uid)
     val now = Clock.System.now()
     val isPrivate = lobby.visibility == Visibility.Private
     // Private lobbies take an invite, either from a friend or made with the join code.
-    val mayJoin = lobby.canJoin(now) && (!isPrivate || hasInvite)
+    val mayEnter = !isPrivate || hasInvite
+    val joinsWaitlist = lobby.canJoinWaitlist(now)
 
     fun perform(action: suspend () -> Unit) {
         busy = true
@@ -176,8 +182,10 @@ private fun LobbyDetails(
         InfoRow("Host", lobby.hostName)
         lobby.type?.let { InfoRow("Type", it.label) }
         lobby.mode?.let { InfoRow("Mode", it.label) }
+        lobby.format?.let { InfoRow("Format", it.label) }
         lobby.level?.let { InfoRow("Level", it) }
         InfoRow("Players", formatPlayerCount(lobby))
+        if (lobby.waitlist.isNotEmpty()) InfoRow("Waiting", "${lobby.waitlist.size}")
         InfoRow(
             "Court",
             if (lobby.isCourtBooked) listOfNotNull("Booked", lobby.courtNumber).joinToString(", ") else "Not booked",
@@ -213,30 +221,29 @@ private fun LobbyDetails(
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Players", style = MaterialTheme.typography.titleMedium)
         lobby.players.forEach { player ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    buildString {
-                        append(player.name)
-                        if (lobby.isHost(player.uid)) append(" (host)")
-                        if (player.uid == user.uid) append(" (you)")
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
+            PlayerRow(
+                player = player,
+                lobby = lobby,
+                user = user,
+                relationTo = relationTo,
+                onAddFriend = onAddFriend,
+                onMakeHost = { perform { repository.makeHost(lobby.id, player.uid) } },
+                onRemove = { removing = player },
+            )
+        }
+        if (lobby.waitlist.isNotEmpty()) {
+            Text("Waitlist", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            lobby.waitlist.forEachIndexed { index, player ->
+                PlayerRow(
+                    player = player,
+                    lobby = lobby,
+                    user = user,
+                    relationTo = relationTo,
+                    onAddFriend = onAddFriend,
+                    onMakeHost = null,
+                    onRemove = { removing = player },
+                    position = index + 1,
                 )
-                // Guests can't have friends, so they don't get the button.
-                if (!user.isGuest) {
-                    when (relationTo(player.uid)) {
-                        Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
-                        Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Relation.RequestReceived -> Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Relation.Self -> Unit
-                    }
-                }
             }
         }
 
@@ -267,22 +274,23 @@ private fun LobbyDetails(
                     Text("Delete lobby", color = MaterialTheme.colorScheme.error)
                 }
             }
-            isPlayer -> OutlinedButton(
+            isPlayer || isWaiting -> OutlinedButton(
                 onClick = { perform { repository.leave(lobby.id, user.uid) } },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Leave lobby")
+                Text(if (isWaiting) "Leave waitlist" else "Leave lobby")
             }
             else -> Button(
                 onClick = { perform { repository.join(lobby.id, user, hasInvite) } },
-                enabled = !busy && mayJoin,
+                enabled = !busy && mayEnter && (lobby.canJoin(now) || joinsWaitlist),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
                     when {
-                        !lobby.canJoin(now) -> "Lobby is full or closed"
-                        !mayJoin -> "Invite only"
+                        !lobby.isOpen || lobby.hasEnded(now) -> "Lobby is closed"
+                        !mayEnter -> "Invite only"
+                        joinsWaitlist -> "Join waitlist"
                         else -> "Join lobby"
                     }
                 )
@@ -310,6 +318,87 @@ private fun LobbyDetails(
 
     if (inviting) {
         InviteFriendsDialog(lobby, user, friends, invites, onDismiss = { inviting = false })
+    }
+
+    removing?.let { player ->
+        AlertDialog(
+            onDismissRequest = { removing = null },
+            title = { Text("Remove ${player.name}?") },
+            text = { Text("They can join again unless you close the lobby.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    removing = null
+                    perform { repository.remove(lobby.id, player.uid) }
+                }) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+/** A player or someone waiting. The host gets a menu to hand over the host role or remove them. */
+@Composable
+private fun PlayerRow(
+    player: Player,
+    lobby: Lobby,
+    user: AppUser,
+    relationTo: (String) -> Relation,
+    onAddFriend: (Player) -> Unit,
+    onMakeHost: (() -> Unit)?,
+    onRemove: () -> Unit,
+    position: Int? = null,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            buildString {
+                position?.let { append("$it. ") }
+                append(player.name)
+                if (lobby.isHost(player.uid)) append(" (host)")
+                if (player.uid == user.uid) append(" (you)")
+            },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        // Guests can't have friends, so they don't get the button.
+        if (!user.isGuest) {
+            when (relationTo(player.uid)) {
+                Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
+                Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.RequestReceived -> Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.Self -> Unit
+            }
+        }
+        if (lobby.isHost(user.uid) && player.uid != user.uid) {
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "More for ${player.name}")
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (onMakeHost != null) {
+                        DropdownMenuItem(
+                            text = { Text("Make host") },
+                            onClick = {
+                                menuOpen = false
+                                onMakeHost()
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Remove from lobby") },
+                        onClick = {
+                            menuOpen = false
+                            onRemove()
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

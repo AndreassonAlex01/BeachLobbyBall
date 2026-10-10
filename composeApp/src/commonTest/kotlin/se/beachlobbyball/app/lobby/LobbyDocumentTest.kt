@@ -1,6 +1,7 @@
 package se.beachlobbyball.app.lobby
 
 import kotlinx.datetime.Instant
+import se.beachlobbyball.app.model.Format
 import se.beachlobbyball.app.model.Location
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.LobbyType
@@ -32,6 +33,8 @@ class LobbyDocumentTest {
         note = "Bring a ball",
         players = listOf(Player("u1", "Alex"), Player("u2", "Sam")),
         joinCode = "K7PQ2M",
+        format = Format.ThreeVThree,
+        waitlist = listOf(Player("u3", "Kim")),
     )
 
     @Test

@@ -66,24 +66,37 @@ class LobbyRepository {
         return ref.id
     }
 
-    /** Joins the lobby. With [hasInvite], the user's invite is used up in the same write. */
+    /**
+     * Joins the lobby, or its waitlist when it's full. With [hasInvite], the user's invite
+     * is used up in the same write once they get a spot.
+     */
     suspend fun join(id: String, user: AppUser, hasInvite: Boolean = false) = change(
         id,
-        cleanUp = if (hasInvite) invites.document(inviteId(id, user.uid)) else null,
+        cleanUp = { updated ->
+            invites.document(inviteId(id, user.uid)).takeIf { hasInvite && updated.hasPlayer(user.uid) }
+        },
     ) { lobby ->
+        val now = Clock.System.now()
         when {
             lobby.hasPlayer(user.uid) -> lobby
             lobby.visibility == Visibility.Private && !hasInvite ->
                 throw LobbyException("This lobby is private. You need an invite or its join code.")
-            !lobby.canJoin(Clock.System.now()) -> throw LobbyException("This lobby is full or closed")
-            else -> lobby.copy(players = lobby.players + Player(user.uid, user.displayName))
+            !lobby.canJoin(now) && !lobby.canJoinWaitlist(now) -> throw LobbyException("This lobby is closed")
+            else -> lobby.withJoined(Player(user.uid, user.displayName))
         }
     }
 
+    /** Leaves the lobby or its waitlist. */
     suspend fun leave(id: String, uid: String) = change(id) { lobby ->
-        if (lobby.isHost(uid)) throw LobbyException("The host can't leave. Delete the lobby instead.")
-        lobby.copy(players = lobby.players.filterNot { it.uid == uid })
+        if (lobby.isHost(uid)) throw LobbyException("The host can't leave. Make someone else host, or delete the lobby.")
+        lobby.without(uid)
     }
+
+    /** For the host: takes a player or someone waiting out of the lobby. */
+    suspend fun remove(id: String, uid: String) = change(id) { it.without(uid) }
+
+    /** For the host: hands the host role to another player. */
+    suspend fun makeHost(id: String, uid: String) = change(id) { it.withHost(uid) }
 
     suspend fun setOpen(id: String, isOpen: Boolean) = change(id) { it.copy(isOpen = isOpen) }
 
@@ -101,7 +114,11 @@ class LobbyRepository {
     }
 
     /** Reads, changes and writes a lobby in one transaction, so two people can't take the last spot. */
-    private suspend fun change(id: String, cleanUp: DocumentReference? = null, transform: (Lobby) -> Lobby) {
+    private suspend fun change(
+        id: String,
+        cleanUp: (Lobby) -> DocumentReference? = { null },
+        transform: (Lobby) -> Lobby,
+    ) {
         val ref = lobbies.document(id)
         try {
             firestore.runTransaction {
@@ -110,7 +127,7 @@ class LobbyRepository {
                 val current = snapshot.toLobby()
                 val updated = transform(current)
                 if (updated != current) set(ref, updated.toDocument())
-                cleanUp?.let { delete(it) }
+                cleanUp(updated)?.let { delete(it) }
                 Unit
             }
         } catch (e: Exception) {

@@ -20,44 +20,88 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && resource.data.hostId == request.auth.uid;
 
-      // The host can edit anything except who the host is.
-      // Everyone else can only add or remove themselves.
+      // The host can edit anything, and hand the host role to a player.
+      // Everyone else can only add or remove themselves, as a player or on the waitlist.
       allow update: if request.auth != null && (
         (resource.data.hostId == request.auth.uid
-          && request.resource.data.hostId == resource.data.hostId)
+          && (request.resource.data.hostId == resource.data.hostId
+            || request.resource.data.hostId in resource.data.playerIds))
         || isJoining()
+        || isJoiningWaitlist()
         || isLeaving()
+        || isLeavingWaitlist()
       );
 
       function onlyPlayersChanged() {
         return request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['playerIds', 'playerNames']);
+          .hasOnly(['playerIds', 'playerNames', 'waitlistIds']);
       }
 
-      function isJoining() {
-        let before = resource.data.playerIds;
-        let after = request.resource.data.playerIds;
-        return onlyPlayersChanged()
-          && resource.data.isOpen == true
-          && (resource.data.visibility == 'Public' || hasInvite())
-          && !(request.auth.uid in before)
-          && after == before.concat([request.auth.uid])
-          && (resource.data.maxPlayers == null || after.size() <= resource.data.maxPlayers);
+      function waitlistBefore() {
+        return resource.data.get('waitlistIds', []);
       }
 
-      // Private lobbies need an invite, from a friend or made with the join code.
+      function waitlistAfter() {
+        return request.resource.data.get('waitlistIds', []);
+      }
+
+      // Open, and for private lobbies, the user has an invite (from a friend or the join code).
+      function mayEnter() {
+        return resource.data.isOpen == true
+          && (resource.data.visibility == 'Public' || hasInvite());
+      }
+
       function hasInvite() {
         return exists(/databases/$(database)/documents/invites/$(lobbyId + '_' + request.auth.uid));
       }
 
-      function isLeaving() {
+      function isFull() {
+        return resource.data.maxPlayers != null && resource.data.playerIds.size() >= resource.data.maxPlayers;
+      }
+
+      // Taking a free spot. With people waiting, only the first in line may.
+      function isJoining() {
         let before = resource.data.playerIds;
         let after = request.resource.data.playerIds;
         return onlyPlayersChanged()
+          && mayEnter()
+          && !isFull()
+          && !(request.auth.uid in before)
+          && after == before.concat([request.auth.uid])
+          && ((waitlistBefore().size() == 0 && waitlistAfter().size() == 0)
+            || (waitlistBefore()[0] == request.auth.uid
+              && waitlistAfter() == waitlistBefore().removeAll([request.auth.uid])));
+      }
+
+      function isJoiningWaitlist() {
+        return onlyPlayersChanged()
+          && mayEnter()
+          && (isFull() || waitlistBefore().size() > 0)
+          && request.resource.data.playerIds == resource.data.playerIds
+          && !(request.auth.uid in resource.data.playerIds)
+          && !(request.auth.uid in waitlistBefore())
+          && waitlistAfter() == waitlistBefore().concat([request.auth.uid]);
+      }
+
+      // A player leaves. If someone is waiting, the first in line takes the spot in the same write.
+      function isLeaving() {
+        let before = resource.data.playerIds;
+        let after = request.resource.data.playerIds;
+        let remaining = before.removeAll([request.auth.uid]);
+        return onlyPlayersChanged()
           && request.auth.uid in before
           && request.auth.uid != resource.data.hostId
-          && after.toSet() == before.toSet().difference([request.auth.uid].toSet())
-          && after.size() == before.size() - 1;
+          && ((after == remaining && waitlistAfter() == waitlistBefore())
+            || (waitlistBefore().size() > 0
+              && after == remaining.concat([waitlistBefore()[0]])
+              && waitlistAfter() == waitlistBefore().removeAll([waitlistBefore()[0]])));
+      }
+
+      function isLeavingWaitlist() {
+        return onlyPlayersChanged()
+          && request.auth.uid in waitlistBefore()
+          && request.resource.data.playerIds == resource.data.playerIds
+          && waitlistAfter() == waitlistBefore().removeAll([request.auth.uid]);
       }
 
       // Lobby chat. Only players in the lobby can read or write.

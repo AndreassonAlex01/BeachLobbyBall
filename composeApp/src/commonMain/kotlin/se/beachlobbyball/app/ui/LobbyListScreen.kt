@@ -98,11 +98,13 @@ fun LobbyCard(lobby: Lobby, onClick: () -> Unit) {
             }
             Text(formatDateTime(lobby.startsAt, timeZone), style = MaterialTheme.typography.bodyMedium)
             val tags = listOfNotNull(
+                lobby.format?.label,
                 lobby.type?.label,
                 lobby.mode?.label,
                 lobby.level,
                 if (lobby.isCourtBooked) "Court booked" else null,
                 if (!lobby.isOpen) "Closed" else null,
+                if (lobby.waitlist.isNotEmpty()) "${lobby.waitlist.size} waiting" else null,
             )
             if (tags.isNotEmpty()) {
                 Text(

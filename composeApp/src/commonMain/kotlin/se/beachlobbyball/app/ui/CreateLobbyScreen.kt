@@ -49,6 +49,7 @@ import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.lobby.parseMaxPlayers
 import se.beachlobbyball.app.lobby.startInstant
 import se.beachlobbyball.app.lobby.validateNewLobby
+import se.beachlobbyball.app.model.Format
 import se.beachlobbyball.app.model.Location
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.LobbyType
@@ -79,6 +80,7 @@ fun CreateLobbyScreen(
     var durationMinutes by rememberSaveable { mutableIntStateOf(120) }
     var type by rememberSaveable { mutableStateOf<LobbyType?>(null) }
     var mode by rememberSaveable { mutableStateOf<Mode?>(null) }
+    var format by rememberSaveable { mutableStateOf<Format?>(null) }
     var maxPlayersText by rememberSaveable { mutableStateOf("4") }
     var level by rememberSaveable { mutableStateOf("") }
     var isPrivate by rememberSaveable { mutableStateOf(false) }
@@ -110,6 +112,7 @@ fun CreateLobbyScreen(
             duration = durationMinutes.minutes,
             type = type,
             mode = mode,
+            format = format,
             maxPlayers = maxPlayers,
             level = level.trim().ifEmpty { null },
             visibility = if (isPrivate) Visibility.Private else Visibility.Public,
@@ -195,6 +198,22 @@ fun CreateLobbyScreen(
                     FilterChip(
                         selected = mode == it,
                         onClick = { mode = if (mode == it) null else it },
+                        label = { Text(it.label) },
+                    )
+                }
+            }
+        }
+
+        Section("Format") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Format.entries.forEach {
+                    FilterChip(
+                        selected = format == it,
+                        onClick = {
+                            format = if (format == it) null else it
+                            // A format sets the matching player count, which can still be changed.
+                            format?.let { picked -> maxPlayersText = "${picked.players}" }
+                        },
                         label = { Text(it.label) },
                     )
                 }
