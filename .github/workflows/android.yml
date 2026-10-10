@@ -23,3 +23,28 @@ jobs:
         with:
           name: beachlobbyball-debug-apk
           path: composeApp/build/outputs/apk/debug/*.apk
+
+  # Every build of main replaces the "Test build" release, so this link always has the latest APK:
+  # https://github.com/AndreassonAlex01/BeachLobbyBall/releases/download/test-build/beachlobbyball-test.apk
+  publish-test-apk:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: beachlobbyball-debug-apk
+      - name: Replace the test build release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mv *.apk beachlobbyball-test.apk
+          gh release delete test-build --yes --cleanup-tag || true
+          gh release create test-build beachlobbyball-test.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Test build" \
+            --notes "Debug build of main at ${GITHUB_SHA::7}, for testing on a phone. Not the Play release."
