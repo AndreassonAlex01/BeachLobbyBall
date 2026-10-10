@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import se.beachlobbyball.app.account.AccountData
+import se.beachlobbyball.app.account.deleteAccount
 import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.auth.AuthRepository
 import se.beachlobbyball.app.chat.ChatRepository
@@ -71,12 +73,14 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
     val friendsRepository = remember { FriendsRepository() }
     val profiles = remember { ProfileRepository() }
     val inviteRepository = remember { InviteRepository() }
+    val accountData = remember { AccountData(lobbies) }
+    val google = rememberGoogleIdTokenSource()
     val scope = rememberCoroutineScope()
 
     var selected by rememberSaveable { mutableStateOf(MainTab.PublicLobbies) }
     var openLobbyId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(user.uid, user.email) {
+    LaunchedEffect(user.uid, user.email, user.isGuest) {
         runCatching { profiles.ensureProfile(user) }
     }
 
@@ -201,6 +205,14 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                     if (!user.isGuest) profiles.save(edited)
                 },
                 onUnblock = { blocked -> scope.launch { runCatching { chat.unblock(user.uid, blocked.uid) } } },
+                onUpgradeWithEmail = { email, password -> auth.upgradeWithEmail(email, password) },
+                onUpgradeWithGoogle = google?.let { source ->
+                    suspend {
+                        val token = source.requestIdToken()
+                        if (token != null) auth.upgradeWithGoogle(token)
+                    }
+                },
+                onDeleteAccount = { password -> deleteAccount(user, password, auth, accountData, google) },
                 onSignOut = onSignOut,
                 modifier = content,
             )

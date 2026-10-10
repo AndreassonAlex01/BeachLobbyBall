@@ -32,3 +32,11 @@ class AuthValidationTest {
         assertNull(validatePassword("123456"))
     }
 }
+
+class AppUserTest {
+    @Test
+    fun methodFollowsGuestFlagByDefault() {
+        kotlin.test.assertEquals(SignInMethod.Guest, AppUser("u", "Sam", isGuest = true).method)
+        kotlin.test.assertEquals(SignInMethod.Email, AppUser("u", "Sam", isGuest = false).method)
+    }
+}

@@ -1,8 +1,10 @@
 package se.beachlobbyball.app.auth
 
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.EmailAuthProvider
 import dev.gitlive.firebase.auth.FirebaseAuthInvalidCredentialsException
 import dev.gitlive.firebase.auth.FirebaseAuthInvalidUserException
+import dev.gitlive.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import dev.gitlive.firebase.auth.FirebaseAuthUserCollisionException
 import dev.gitlive.firebase.auth.FirebaseAuthWeakPasswordException
 import dev.gitlive.firebase.auth.FirebaseUser
@@ -49,6 +51,30 @@ class FirebaseAuthRepository : AuthRepository {
         Unit
     }
 
+    override suspend fun upgradeWithEmail(email: String, password: String) = mapErrors {
+        currentUser().linkWithCredential(EmailAuthProvider.credential(email.trim(), password))
+        profileVersion.value++
+    }
+
+    override suspend fun upgradeWithGoogle(idToken: String) = mapErrors {
+        currentUser().linkWithCredential(GoogleAuthProvider.credential(idToken, null))
+        profileVersion.value++
+    }
+
+    override suspend fun confirmWithPassword(password: String) = mapErrors {
+        val user = currentUser()
+        val email = user.email ?: throw AuthException(GENERIC_ERROR)
+        user.reauthenticate(EmailAuthProvider.credential(email, password))
+    }
+
+    override suspend fun confirmWithGoogle(idToken: String) = mapErrors {
+        currentUser().reauthenticate(GoogleAuthProvider.credential(idToken, null))
+    }
+
+    override suspend fun deleteAccount() = mapErrors {
+        currentUser().delete()
+    }
+
     override suspend fun updateName(name: String) = mapErrors {
         val user = auth.currentUser ?: throw AuthException(GENERIC_ERROR)
         user.updateProfile(displayName = name.trim())
@@ -59,11 +85,19 @@ class FirebaseAuthRepository : AuthRepository {
         auth.signOut()
     }
 
+    private fun currentUser(): FirebaseUser = auth.currentUser ?: throw AuthException(GENERIC_ERROR)
+
     private fun FirebaseUser.toAppUser() = AppUser(
         uid = uid,
         displayName = displayName?.takeIf { it.isNotBlank() } ?: email ?: "Player",
         isGuest = isAnonymous,
         email = email,
+        method = when {
+            isAnonymous -> SignInMethod.Guest
+            providerData.any { it.providerId == "password" } -> SignInMethod.Email
+            providerData.any { it.providerId == "google.com" } -> SignInMethod.Google
+            else -> SignInMethod.Email
+        },
     )
 
     private inline fun mapErrors(block: () -> Unit) {
@@ -79,6 +113,8 @@ class FirebaseAuthRepository : AuthRepository {
             throw AuthException("Wrong email or password")
         } catch (e: FirebaseAuthInvalidCredentialsException) {
             throw AuthException("Wrong email or password")
+        } catch (e: FirebaseAuthRecentLoginRequiredException) {
+            throw AuthException("For your safety, sign out, sign in again, and then try once more.")
         } catch (e: Exception) {
             throw AuthException(GENERIC_ERROR)
         }

@@ -160,6 +160,17 @@ cases = [
                  "result": {"value": {"data": lobby(visibility="Private", joinCode="K7PQ2M")}}}]),
     case("look up a join code", "ALLOW", GUEST("g"), "/lobbyCodes/K7PQ2M", "get", resource={"lobbyId": "l1"}),
     case("list join codes", "DENY", GUEST("g"), "/lobbyCodes/K7PQ2M", "list", resource={"lobbyId": "l1"}),
+
+    # Account deletion.
+    case("find own messages everywhere", "ALLOW", ACCOUNT("p9"), "/lobbies/l1/messages/m", "list",
+         resource={"senderId": "p9", "text": "hi"}, mocks=get_lobby),
+    case("find others' messages everywhere", "DENY", ACCOUNT("p9"), "/lobbies/l1/messages/m", "list",
+         resource={"senderId": "p1", "text": "hi"}, mocks=get_lobby),
+    case("delete own message after leaving", "ALLOW", ACCOUNT("p9"), "/lobbies/l1/messages/m", "delete",
+         resource={"senderId": "p9", "text": "hi"}, mocks=get_lobby),
+    case("delete own profile", "ALLOW", ACCOUNT("a"), "/profiles/a", "delete", resource={"name": "A", "nameLower": "a"}),
+    case("delete own email entry", "ALLOW", ACCOUNT("a"), "/emailIndex/a@x.se", "delete", resource={"uid": "a"}),
+    case("delete someone's email entry", "DENY", ACCOUNT("b"), "/emailIndex/a@x.se", "delete", resource={"uid": "a"}),
 ]
 
 env = {k: v for k, v in os.environ.items() if k != "CLOUDSDK_AUTH_ACCESS_TOKEN"}
