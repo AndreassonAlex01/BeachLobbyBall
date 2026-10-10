@@ -51,6 +51,9 @@ fun ProfileScreen(
     blockedUsers: List<BlockedUser>,
     onSave: suspend (Profile) -> Unit,
     onUnblock: (BlockedUser) -> Unit,
+    onUpgradeWithEmail: suspend (email: String, password: String) -> Unit,
+    onUpgradeWithGoogle: (suspend () -> Unit)?,
+    onDeleteAccount: suspend (password: String?) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -131,6 +134,11 @@ fun ProfileScreen(
         message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         Button(onClick = ::save, enabled = changed && !busy) { Text("Save") }
 
+        if (user.isGuest) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            GuestUpgradeSection(onUpgradeWithEmail, onUpgradeWithGoogle)
+        }
+
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Recently joined lobbies", style = MaterialTheme.typography.titleMedium)
         if (recentLobbies.isEmpty()) {
@@ -187,5 +195,6 @@ fun ProfileScreen(
         OutlinedButton(onClick = onSignOut) {
             Text("Sign out")
         }
+        DeleteAccountButton(user, onDeleteAccount)
     }
 }

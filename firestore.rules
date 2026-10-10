@@ -86,6 +86,11 @@ service cloud.firestore {
       }
     }
 
+    // Lets people find all their own chat messages, to delete them with their account.
+    match /{path=**}/messages/{messageId} {
+      allow list: if request.auth != null && resource.data.senderId == request.auth.uid;
+    }
+
     // Lobby invites, stored as {lobbyId}_{toId}.
     match /invites/{inviteId} {
       allow read: if request.auth != null
