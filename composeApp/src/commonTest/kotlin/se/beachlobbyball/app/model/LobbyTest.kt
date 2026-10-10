@@ -2,6 +2,7 @@ package se.beachlobbyball.app.model
 
 import kotlinx.datetime.Instant
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
@@ -9,16 +10,17 @@ import kotlin.time.Duration.Companion.hours
 class LobbyTest {
     private val start = Instant.parse("2026-10-11T17:00:00Z")
 
-    private fun lobby(maxPlayers: Int? = 4, players: Int = 0, isOpen: Boolean = true) = Lobby(
+    private fun lobby(maxPlayers: Int? = 4, players: Int = 1, isOpen: Boolean = true) = Lobby(
         id = "l1",
-        hostId = "h1",
+        hostId = "p0",
+        hostName = "Host",
         location = Location.GBC,
         createdAt = Instant.parse("2026-10-10T08:00:00Z"),
         startsAt = start,
         duration = 2.hours,
         maxPlayers = maxPlayers,
         isOpen = isOpen,
-        playerIds = List(players) { "p$it" },
+        players = List(players) { Player("p$it", "Player $it") },
     )
 
     @Test
@@ -44,5 +46,21 @@ class LobbyTest {
     @Test
     fun lobbyWithoutLimitIsNeverFull() {
         assertTrue(lobby(maxPlayers = null, players = 30).canJoin(start))
+    }
+
+    @Test
+    fun hostAndPlayersAreRecognized() {
+        val l = lobby(players = 2)
+        assertTrue(l.isHost("p0"))
+        assertFalse(l.isHost("p1"))
+        assertTrue(l.hasPlayer("p1"))
+        assertFalse(l.hasPlayer("p2"))
+    }
+
+    @Test
+    fun otherLocationUsesItsName() {
+        assertEquals("Skatås", lobby().copy(location = Location.Skatas).locationName)
+        assertEquals("Slottsskogen", lobby().copy(location = Location.Other, otherLocationName = "Slottsskogen").locationName)
+        assertEquals("Other", lobby().copy(location = Location.Other, otherLocationName = " ").locationName)
     }
 }
