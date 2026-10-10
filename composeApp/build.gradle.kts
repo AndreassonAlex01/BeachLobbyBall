@@ -52,7 +52,8 @@ android {
         applicationId = "se.beachlobbyball.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
+        // CI sets VERSION_CODE so every Play upload gets a higher number.
+        versionCode = System.getenv("VERSION_CODE")?.toInt() ?: 1
         versionName = "0.1.0"
     }
     signingConfigs {
@@ -64,10 +65,20 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // The Play upload key. CI decodes it from a GitHub secret; it's never committed.
+        System.getenv("UPLOAD_KEYSTORE_PATH")?.let { path ->
+            create("upload") {
+                storeFile = file(path)
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = "upload"
+                keyPassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+            }
+        }
     }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("upload")
         }
     }
     compileOptions {
