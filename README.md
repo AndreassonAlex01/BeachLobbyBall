@@ -27,3 +27,7 @@ The rules live in `firestore.rules`. To test them against Firebase's rules test 
 ```
 python3 tools/test_firestore_rules.py
 ```
+
+## Firestore indexes
+
+Account deletion finds a user's chat messages in every lobby with a collection group query, so `senderId` on the `messages` collection group needs a collection group index (ascending). It was added in the Firebase console under Firestore > Indexes > Single field.
