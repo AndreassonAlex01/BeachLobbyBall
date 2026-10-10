@@ -2,6 +2,7 @@ package se.beachlobbyball.app.lobby
 
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
+import se.beachlobbyball.app.model.Format
 import se.beachlobbyball.app.model.Location
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.LobbyType
@@ -22,6 +23,7 @@ data class LobbyDocument(
     val durationMinutes: Int = 120,
     val type: String? = null,
     val mode: String? = null,
+    val format: String? = null,
     val maxPlayers: Int? = null,
     val level: String? = null,
     val visibility: String = Visibility.Public.name,
@@ -31,8 +33,10 @@ data class LobbyDocument(
     val note: String? = null,
     /** Player uids in join order. The host is always first. */
     val playerIds: List<String> = emptyList(),
+    /** Names of players and people on the waitlist. */
     val playerNames: Map<String, String> = emptyMap(),
     val joinCode: String? = null,
+    val waitlistIds: List<String> = emptyList(),
 )
 
 fun LobbyDocument.toLobby(id: String) = Lobby(
@@ -46,6 +50,7 @@ fun LobbyDocument.toLobby(id: String) = Lobby(
     duration = durationMinutes.minutes,
     type = type?.let { enumOrNull<LobbyType>(it) },
     mode = mode?.let { enumOrNull<Mode>(it) },
+    format = format?.let { enumOrNull<Format>(it) },
     maxPlayers = maxPlayers,
     level = level,
     visibility = enumOrNull<Visibility>(visibility) ?: Visibility.Private,
@@ -55,6 +60,7 @@ fun LobbyDocument.toLobby(id: String) = Lobby(
     note = note,
     players = playerIds.map { Player(it, playerNames[it] ?: "Player") },
     joinCode = joinCode,
+    waitlist = waitlistIds.map { Player(it, playerNames[it] ?: "Player") },
 )
 
 fun Lobby.toDocument() = LobbyDocument(
@@ -67,6 +73,7 @@ fun Lobby.toDocument() = LobbyDocument(
     durationMinutes = duration.inWholeMinutes.toInt(),
     type = type?.name,
     mode = mode?.name,
+    format = format?.name,
     maxPlayers = maxPlayers,
     level = level,
     visibility = visibility.name,
@@ -75,8 +82,9 @@ fun Lobby.toDocument() = LobbyDocument(
     courtNumber = courtNumber,
     note = note,
     playerIds = players.map { it.uid },
-    playerNames = players.associate { it.uid to it.name },
+    playerNames = (players + waitlist).associate { it.uid to it.name },
     joinCode = joinCode,
+    waitlistIds = waitlist.map { it.uid },
 )
 
 private inline fun <reified T : Enum<T>> enumOrNull(name: String): T? =

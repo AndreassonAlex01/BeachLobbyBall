@@ -22,6 +22,13 @@ enum class Mode(val label: String) {
     Practice("Practice"),
 }
 
+enum class Format(val label: String, val players: Int) {
+    TwoVTwo("2v2", 4),
+    ThreeVThree("3v3", 6),
+    FourVFour("4v4", 8),
+    SixVSix("6v6", 12),
+}
+
 enum class Visibility { Public, Private }
 
 data class Player(val uid: String, val name: String)
@@ -38,6 +45,7 @@ data class Lobby(
     val duration: Duration,
     val type: LobbyType? = null,
     val mode: Mode? = null,
+    val format: Format? = null,
     val maxPlayers: Int? = null,
     val level: String? = null,
     val visibility: Visibility = Visibility.Public,
@@ -49,6 +57,8 @@ data class Lobby(
     val players: List<Player> = emptyList(),
     /** Short code that lets people into a private lobby, shared by the host. */
     val joinCode: String? = null,
+    /** People waiting for a spot, first in line first. */
+    val waitlist: List<Player> = emptyList(),
 ) {
     val endsAt: Instant get() = startsAt + duration
 
@@ -60,9 +70,15 @@ data class Lobby(
 
     fun hasPlayer(uid: String): Boolean = players.any { it.uid == uid }
 
+    fun isWaiting(uid: String): Boolean = waitlist.any { it.uid == uid }
+
     fun isHost(uid: String): Boolean = hostId == uid
 
     fun hasEnded(now: Instant): Boolean = now >= endsAt
 
     fun canJoin(now: Instant): Boolean = isOpen && !isFull && !hasEnded(now)
+
+    /** When there's no free spot, or people are already waiting for one. */
+    fun canJoinWaitlist(now: Instant): Boolean =
+        isOpen && !hasEnded(now) && (isFull || waitlist.isNotEmpty())
 }
