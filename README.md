@@ -31,3 +31,12 @@ python3 tools/test_firestore_rules.py
 ## Firestore indexes
 
 Account deletion finds a user's chat messages in every lobby with a collection group query, so `senderId` on the `messages` collection group needs a collection group index (ascending). It was added in the Firebase console under Firestore > Indexes > Single field.
+
+## Release builds for Google Play
+
+Every push to `main` also runs the "Release build" workflow, which builds a signed app bundle (`.aab`) to upload to Play. It needs two repository secrets, under Settings > Secrets and variables > Actions:
+
+- `UPLOAD_KEYSTORE_BASE64`: the upload keystore, base64-encoded
+- `UPLOAD_KEYSTORE_PASSWORD`: its password (the key alias is `upload`)
+
+Without them the workflow skips the build. Google Play re-signs the app with its own app signing key, so add that key's SHA-1 and SHA-256 (Play Console > Test and release > App integrity) to the Firebase Android app, or Google sign-in won't work in Play builds.
