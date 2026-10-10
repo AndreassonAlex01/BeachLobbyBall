@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Paste this into Firebase console > Firestore Database > Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /lobbies/{lobbyId} {
+      // Any signed-in user (guests included) can see lobbies.
+      allow read: if request.auth != null;
+
+      // The creator must be the host and the only player.
+      allow create: if request.auth != null
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.playerIds == [request.auth.uid];
+
+      // Only the host can delete.
+      allow delete: if request.auth != null
+        && resource.data.hostId == request.auth.uid;
+
+      // The host can edit anything except who the host is.
+      // Everyone else can only add or remove themselves.
+      allow update: if request.auth != null && (
+        (resource.data.hostId == request.auth.uid
+          && request.resource.data.hostId == resource.data.hostId)
+        || isJoining()
+        || isLeaving()
+      );
+
+      function onlyPlayersChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['playerIds', 'playerNames']);
+      }
+
+      function isJoining() {
+        let before = resource.data.playerIds;
+        let after = request.resource.data.playerIds;
+        return onlyPlayersChanged()
+          && resource.data.isOpen == true
+          && !(request.auth.uid in before)
+          && after == before.concat([request.auth.uid])
+          && (resource.data.maxPlayers == null || after.size() <= resource.data.maxPlayers);
+      }
+
+      function isLeaving() {
+        let before = resource.data.playerIds;
+        let after = request.resource.data.playerIds;
+        return onlyPlayersChanged()
+          && request.auth.uid in before
+          && request.auth.uid != resource.data.hostId
+          && after.toSet() == before.toSet().difference([request.auth.uid].toSet())
+          && after.size() == before.size() - 1;
+      }
+    }
+  }
+}
