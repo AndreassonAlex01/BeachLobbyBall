@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A plain ball, used as the notification icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2A10,10 0,1 0,22 12A10,10 0,0 0,12 2ZM12,4A8,8 0,1 1,4 12A8,8 0,0 1,12 4Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11,4.1C9,7 9,13 12,16L13.4,14.9C11,12.2 11,7.6 12.6,4.2ZM4.4,14.3C8,13 12,14 14.6,17.6L16.2,16.4C13,12.2 8.4,11.2 4,12.5Z" />
+</vector>

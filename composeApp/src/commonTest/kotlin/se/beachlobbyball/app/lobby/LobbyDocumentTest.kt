@@ -31,6 +31,7 @@ class LobbyDocumentTest {
         courtNumber = "4",
         note = "Bring a ball",
         players = listOf(Player("u1", "Alex"), Player("u2", "Sam")),
+        joinCode = "K7PQ2M",
     )
 
     @Test

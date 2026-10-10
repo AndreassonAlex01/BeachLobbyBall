@@ -5,8 +5,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /lobbies/{lobbyId} {
-      // Any signed-in user (guests included) can see lobbies.
-      allow read: if request.auth != null;
+      // Anyone signed in (guests included) can open a lobby they have the id of,
+      // for example from an invite. Searching only finds public lobbies and your own.
+      allow get: if request.auth != null;
+      allow list: if request.auth != null
+        && (resource.data.visibility == 'Public' || request.auth.uid in resource.data.playerIds);
 
       // The creator must be the host and the only player.
       allow create: if request.auth != null
@@ -36,9 +39,15 @@ service cloud.firestore {
         let after = request.resource.data.playerIds;
         return onlyPlayersChanged()
           && resource.data.isOpen == true
+          && (resource.data.visibility == 'Public' || hasInvite())
           && !(request.auth.uid in before)
           && after == before.concat([request.auth.uid])
           && (resource.data.maxPlayers == null || after.size() <= resource.data.maxPlayers);
+      }
+
+      // Private lobbies need an invite, from a friend or made with the join code.
+      function hasInvite() {
+        return exists(/databases/$(database)/documents/invites/$(lobbyId + '_' + request.auth.uid));
       }
 
       function isLeaving() {
@@ -75,6 +84,51 @@ service cloud.firestore {
           || lobby().hostId == request.auth.uid
         );
       }
+    }
+
+    // Lobby invites, stored as {lobbyId}_{toId}.
+    match /invites/{inviteId} {
+      allow read: if request.auth != null
+        && (resource.data.toId == request.auth.uid || resource.data.fromId == request.auth.uid);
+
+      allow create, update: if request.auth != null
+        && request.resource.data.fromId == request.auth.uid
+        && inviteId == request.resource.data.lobbyId + '_' + request.resource.data.toId
+        && (isFriendInvite() || isCodeInvite());
+
+      // The invitee declines or uses it up, or the sender takes it back.
+      allow delete: if request.auth != null
+        && (resource.data.toId == request.auth.uid || resource.data.fromId == request.auth.uid);
+
+      // A player in the lobby invites one of their friends.
+      function isFriendInvite() {
+        let invite = request.resource.data;
+        return isAccount()
+          && invite.toId != request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/lobbies/$(invite.lobbyId)).data.playerIds
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid)/friends/$(invite.toId));
+      }
+
+      // Someone with the lobby's join code lets themselves in.
+      function isCodeInvite() {
+        let invite = request.resource.data;
+        return invite.toId == request.auth.uid
+          && invite.code is string
+          && get(/databases/$(database)/documents/lobbyCodes/$(invite.code)).data.lobbyId == invite.lobbyId;
+      }
+    }
+
+    // Join codes for private lobbies. Look one up by its code; they can't be listed.
+    match /lobbyCodes/{code} {
+      allow get: if request.auth != null;
+
+      // Written together with the lobby, by its host.
+      allow create: if request.auth != null
+        && getAfter(/databases/$(database)/documents/lobbies/$(request.resource.data.lobbyId)).data.hostId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/lobbies/$(request.resource.data.lobbyId)).data.joinCode == code;
+
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/lobbies/$(resource.data.lobbyId)).data.hostId == request.auth.uid;
     }
 
     // Reports are write-only from the app. Read them in the Firebase console.

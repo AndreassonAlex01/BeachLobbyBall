@@ -1,12 +1,16 @@
 package se.beachlobbyball.app.lobby
 
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.firestore.DocumentReference
 import dev.gitlive.firebase.firestore.DocumentSnapshot
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 import se.beachlobbyball.app.auth.AppUser
+import se.beachlobbyball.app.invites.LobbyCodeDocument
+import se.beachlobbyball.app.invites.inviteId
+import se.beachlobbyball.app.invites.newJoinCode
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
@@ -17,6 +21,8 @@ class LobbyException(message: String) : Exception(message)
 class LobbyRepository {
     private val firestore = Firebase.firestore
     private val lobbies = firestore.collection("lobbies")
+    private val codes = firestore.collection("lobbyCodes")
+    private val invites = firestore.collection("invites")
 
     /** All public lobbies, including ones that have ended. Filter and sort in the UI. */
     fun publicLobbies(): Flow<List<Lobby>> =
@@ -42,12 +48,33 @@ class LobbyRepository {
             createdAt = Clock.System.now(),
             players = listOf(Player(host.uid, host.displayName)),
         )
-        return lobbies.add(withHost.toDocument()).id
+        if (withHost.visibility == Visibility.Public) return lobbies.add(withHost.toDocument()).id
+        // Private lobbies get a join code. Writing a code that's already taken fails, so try a few.
+        repeat(CODE_ATTEMPTS - 1) {
+            runCatching { return createWithCode(withHost) }
+        }
+        return createWithCode(withHost)
     }
 
-    suspend fun join(id: String, user: AppUser) = change(id) { lobby ->
+    private suspend fun createWithCode(lobby: Lobby): String {
+        val ref = lobbies.document
+        val code = newJoinCode()
+        val batch = firestore.batch()
+        batch.set(ref, lobby.copy(joinCode = code).toDocument())
+        batch.set(codes.document(code), LobbyCodeDocument(ref.id))
+        batch.commit()
+        return ref.id
+    }
+
+    /** Joins the lobby. With [hasInvite], the user's invite is used up in the same write. */
+    suspend fun join(id: String, user: AppUser, hasInvite: Boolean = false) = change(
+        id,
+        cleanUp = if (hasInvite) invites.document(inviteId(id, user.uid)) else null,
+    ) { lobby ->
         when {
             lobby.hasPlayer(user.uid) -> lobby
+            lobby.visibility == Visibility.Private && !hasInvite ->
+                throw LobbyException("This lobby is private. You need an invite or its join code.")
             !lobby.canJoin(Clock.System.now()) -> throw LobbyException("This lobby is full or closed")
             else -> lobby.copy(players = lobby.players + Player(user.uid, user.displayName))
         }
@@ -60,15 +87,21 @@ class LobbyRepository {
 
     suspend fun setOpen(id: String, isOpen: Boolean) = change(id) { it.copy(isOpen = isOpen) }
 
-    /** Deletes the lobby and its chat. Firestore doesn't delete subcollections on its own. */
-    suspend fun delete(id: String) {
-        val ref = lobbies.document(id)
+    /**
+     * Deletes the lobby with its chat, join code and the host's invites.
+     * Firestore doesn't delete subcollections on its own.
+     */
+    suspend fun delete(lobby: Lobby) {
+        val ref = lobbies.document(lobby.id)
         ref.collection("messages").get().documents.forEach { it.reference.delete() }
+        invites.where { "fromId" equalTo lobby.hostId }.where { "lobbyId" equalTo lobby.id }
+            .get().documents.forEach { it.reference.delete() }
+        lobby.joinCode?.let { codes.document(it).delete() }
         ref.delete()
     }
 
     /** Reads, changes and writes a lobby in one transaction, so two people can't take the last spot. */
-    private suspend fun change(id: String, transform: (Lobby) -> Lobby) {
+    private suspend fun change(id: String, cleanUp: DocumentReference? = null, transform: (Lobby) -> Lobby) {
         val ref = lobbies.document(id)
         try {
             firestore.runTransaction {
@@ -77,6 +110,7 @@ class LobbyRepository {
                 val current = snapshot.toLobby()
                 val updated = transform(current)
                 if (updated != current) set(ref, updated.toDocument())
+                cleanUp?.let { delete(it) }
                 Unit
             }
         } catch (e: Exception) {
@@ -87,4 +121,8 @@ class LobbyRepository {
     }
 
     private fun DocumentSnapshot.toLobby(): Lobby = data<LobbyDocument>().toLobby(id)
+
+    private companion object {
+        const val CODE_ATTEMPTS = 3
+    }
 }

@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import se.beachlobbyball.app.auth.AppUser
@@ -39,7 +38,10 @@ import se.beachlobbyball.app.friends.FriendRequest
 import se.beachlobbyball.app.friends.FriendsRepository
 import se.beachlobbyball.app.friends.Relation
 import se.beachlobbyball.app.friends.relationTo
+import se.beachlobbyball.app.invites.InviteRepository
+import se.beachlobbyball.app.invites.pending
 import se.beachlobbyball.app.lobby.LobbyRepository
+import se.beachlobbyball.app.lobby.upcoming
 import se.beachlobbyball.app.lobby.recentlyJoined
 import se.beachlobbyball.app.lobby.recentlyPlayedWith
 import se.beachlobbyball.app.model.Player
@@ -68,6 +70,7 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
     val chat = remember { ChatRepository() }
     val friendsRepository = remember { FriendsRepository() }
     val profiles = remember { ProfileRepository() }
+    val inviteRepository = remember { InviteRepository() }
     val scope = rememberCoroutineScope()
 
     var selected by rememberSaveable { mutableStateOf(MainTab.PublicLobbies) }
@@ -78,13 +81,17 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
     }
 
     val publicLobbies = remember { lobbies.publicLobbies() }
-    val myPrivateLobbies = remember(user.uid) {
-        lobbies.lobbiesWithPlayer(user.uid).map { list -> list.filter { it.visibility == Visibility.Private } }
-    }
     val myLobbies = lobbies.lobbiesWithPlayer(user.uid).collectOr(emptyList(), user.uid)
     val now = Clock.System.now()
+    val myPrivateLobbies = myLobbies.filter { it.visibility == Visibility.Private }.upcoming(now)
     val recentLobbies = myLobbies.recentlyJoined(now)
     val recentPlayers = myLobbies.recentlyPlayedWith(user.uid, now)
+
+    // Includes invites made with a join code, which let the user into that private lobby.
+    val allInvites = inviteRepository.incoming(user.uid).collectOr(emptyList(), user.uid)
+    val invitedLobbyIds = allInvites.map { it.lobbyId }.toSet()
+    val pendingInvites = allInvites.pending(now, myLobbies.map { it.id }.toSet())
+    if (!user.isGuest) InviteNotifications(pendingInvites)
     val blockedUsers = chat.blockedUsers(user.uid).collectOr(emptyList(), user.uid)
     val blockedIds = remember(blockedUsers) { blockedUsers.map { it.uid }.toSet() }
     val profile = profiles.profile(user.uid).collectOr(null, user.uid)
@@ -113,8 +120,13 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                             openLobbyId = null
                         },
                         icon = {
-                            if (tab == MainTab.Friends && incoming.isNotEmpty()) {
-                                BadgedBox(badge = { Badge { Text("${incoming.size}") } }) {
+                            val count = when (tab) {
+                                MainTab.Friends -> incoming.size
+                                MainTab.PrivateLobbies -> pendingInvites.size
+                                else -> 0
+                            }
+                            if (count > 0) {
+                                BadgedBox(badge = { Badge { Text("$count") } }) {
                                     Icon(tab.icon, contentDescription = tab.label)
                                 }
                             } else {
@@ -136,6 +148,9 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                 repository = lobbies,
                 chat = chat,
                 blockedIds = blockedIds,
+                friends = friends,
+                invites = inviteRepository,
+                hasInvite = lobbyId in invitedLobbyIds,
                 relationTo = relation,
                 onAddFriend = addFriend,
                 onBack = { openLobbyId = null },
@@ -149,10 +164,11 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                 onOpen = { openLobbyId = it },
                 modifier = content,
             )
-            MainTab.PrivateLobbies -> LobbyListScreen(
-                source = myPrivateLobbies,
-                title = "Your private lobbies",
-                emptyText = "You're not in any private lobbies.\nInvites are coming in a later update.",
+            MainTab.PrivateLobbies -> PrivateLobbiesScreen(
+                user = user,
+                invites = pendingInvites,
+                lobbies = myPrivateLobbies,
+                inviteRepository = inviteRepository,
                 onOpen = { openLobbyId = it },
                 modifier = content,
             )

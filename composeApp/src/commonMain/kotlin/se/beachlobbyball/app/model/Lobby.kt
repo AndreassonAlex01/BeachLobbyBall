@@ -47,6 +47,8 @@ data class Lobby(
     val courtNumber: String? = null,
     val note: String? = null,
     val players: List<Player> = emptyList(),
+    /** Short code that lets people into a private lobby, shared by the host. */
+    val joinCode: String? = null,
 ) {
     val endsAt: Instant get() = startsAt + duration
 

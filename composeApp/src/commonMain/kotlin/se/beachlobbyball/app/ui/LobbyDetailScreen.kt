@@ -33,6 +33,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -41,7 +43,9 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.chat.ChatRepository
+import se.beachlobbyball.app.friends.Friend
 import se.beachlobbyball.app.friends.Relation
+import se.beachlobbyball.app.invites.InviteRepository
 import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Player
@@ -61,6 +65,9 @@ fun LobbyDetailScreen(
     repository: LobbyRepository,
     chat: ChatRepository,
     blockedIds: Set<String>,
+    friends: List<Friend>,
+    invites: InviteRepository,
+    hasInvite: Boolean,
     relationTo: (String) -> Relation,
     onAddFriend: (Player) -> Unit,
     onBack: () -> Unit,
@@ -95,7 +102,17 @@ fun LobbyDetailScreen(
                 if (showChat) {
                     ChatPanel(s.lobby, user, chat, blockedIds)
                 } else {
-                    LobbyDetails(s.lobby, user, repository, relationTo, onAddFriend, onDeleted = onBack)
+                    LobbyDetails(
+                        lobby = s.lobby,
+                        user = user,
+                        repository = repository,
+                        friends = friends,
+                        invites = invites,
+                        hasInvite = hasInvite,
+                        relationTo = relationTo,
+                        onAddFriend = onAddFriend,
+                        onDeleted = onBack,
+                    )
                 }
             }
         }
@@ -112,6 +129,9 @@ private fun LobbyDetails(
     lobby: Lobby,
     user: AppUser,
     repository: LobbyRepository,
+    friends: List<Friend>,
+    invites: InviteRepository,
+    hasInvite: Boolean,
     relationTo: (String) -> Relation,
     onAddFriend: (Player) -> Unit,
     onDeleted: () -> Unit,
@@ -121,8 +141,13 @@ private fun LobbyDetails(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var inviting by remember { mutableStateOf(false) }
     val isHost = lobby.isHost(user.uid)
     val isPlayer = lobby.hasPlayer(user.uid)
+    val now = Clock.System.now()
+    val isPrivate = lobby.visibility == Visibility.Private
+    // Private lobbies take an invite, either from a friend or made with the join code.
+    val mayJoin = lobby.canJoin(now) && (!isPrivate || hasInvite)
 
     fun perform(action: suspend () -> Unit) {
         busy = true
@@ -164,6 +189,26 @@ private fun LobbyDetails(
         lobby.note?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
         }
+        val code = lobby.joinCode
+        if (isPlayer && isPrivate && code != null) {
+            val clipboard = LocalClipboardManager.current
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text("Join code", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(code, style = MaterialTheme.typography.titleLarge)
+                }
+                TextButton(onClick = { clipboard.setText(AnnotatedString(code)) }) { Text("Copy") }
+            }
+            Text(
+                "Anyone with this code can join. Share it in a group chat, or invite friends below.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Players", style = MaterialTheme.typography.titleMedium)
@@ -198,6 +243,13 @@ private fun LobbyDetails(
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
+        // Guests can't have friends, so only accounts invite.
+        if (isPlayer && !user.isGuest && !lobby.hasEnded(now)) {
+            Button(onClick = { inviting = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Invite friends")
+            }
+        }
+
         when {
             isHost -> {
                 OutlinedButton(
@@ -223,11 +275,17 @@ private fun LobbyDetails(
                 Text("Leave lobby")
             }
             else -> Button(
-                onClick = { perform { repository.join(lobby.id, user) } },
-                enabled = !busy && lobby.canJoin(Clock.System.now()),
+                onClick = { perform { repository.join(lobby.id, user, hasInvite) } },
+                enabled = !busy && mayJoin,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (lobby.canJoin(Clock.System.now())) "Join lobby" else "Lobby is full or closed")
+                Text(
+                    when {
+                        !lobby.canJoin(now) -> "Lobby is full or closed"
+                        !mayJoin -> "Invite only"
+                        else -> "Join lobby"
+                    }
+                )
             }
         }
     }
@@ -241,13 +299,17 @@ private fun LobbyDetails(
                 TextButton(onClick = {
                     confirmDelete = false
                     perform {
-                        repository.delete(lobby.id)
+                        repository.delete(lobby)
                         onDeleted()
                     }
                 }) { Text("Delete") }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
+    }
+
+    if (inviting) {
+        InviteFriendsDialog(lobby, user, friends, invites, onDismiss = { inviting = false })
     }
 }
 
