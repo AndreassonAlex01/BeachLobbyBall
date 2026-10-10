@@ -15,20 +15,25 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import se.beachlobbyball.app.auth.AppUser
+import se.beachlobbyball.app.chat.ChatRepository
 import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.model.Visibility
 
-enum class Tab(val label: String, val icon: ImageVector) {
+enum class MainTab(val label: String, val icon: ImageVector) {
     PublicLobbies("Public", Icons.Filled.Public),
     PrivateLobbies("Private", Icons.Filled.Lock),
     CreateLobby("Create", Icons.Filled.AddCircle),
@@ -39,7 +44,8 @@ enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 fun MainScreen(user: AppUser, onSignOut: () -> Unit) {
     val lobbies = remember { LobbyRepository() }
-    var selected by rememberSaveable { mutableStateOf(Tab.PublicLobbies) }
+    val chat = remember { ChatRepository() }
+    var selected by rememberSaveable { mutableStateOf(MainTab.PublicLobbies) }
     var openLobbyId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val publicLobbies = remember { lobbies.publicLobbies() }
@@ -47,10 +53,15 @@ fun MainScreen(user: AppUser, onSignOut: () -> Unit) {
         lobbies.lobbiesWithPlayer(user.uid).map { list -> list.filter { it.visibility == Visibility.Private } }
     }
 
+    val blockedFlow = remember(user.uid) { chat.blockedUsers(user.uid).catch { emit(emptyList()) } }
+    val blockedUsers by blockedFlow.collectAsState(initial = emptyList())
+    val blockedIds = remember(blockedUsers) { blockedUsers.map { it.uid }.toSet() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         bottomBar = {
             NavigationBar {
-                Tab.entries.forEach { tab ->
+                MainTab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = tab == selected && openLobbyId == null,
                         onClick = {
@@ -67,30 +78,44 @@ fun MainScreen(user: AppUser, onSignOut: () -> Unit) {
         val content = Modifier.padding(padding)
         val lobbyId = openLobbyId
         if (lobbyId != null) {
-            LobbyDetailScreen(lobbyId, user, lobbies, onBack = { openLobbyId = null }, modifier = content)
+            LobbyDetailScreen(
+                lobbyId = lobbyId,
+                user = user,
+                repository = lobbies,
+                chat = chat,
+                blockedIds = blockedIds,
+                onBack = { openLobbyId = null },
+                modifier = content,
+            )
         } else when (selected) {
-            Tab.PublicLobbies -> LobbyListScreen(
+            MainTab.PublicLobbies -> LobbyListScreen(
                 source = publicLobbies,
                 title = "Public lobbies",
                 emptyText = "No upcoming public lobbies yet.\nCreate one from the Create tab.",
                 onOpen = { openLobbyId = it },
                 modifier = content,
             )
-            Tab.PrivateLobbies -> LobbyListScreen(
+            MainTab.PrivateLobbies -> LobbyListScreen(
                 source = myPrivateLobbies,
                 title = "Your private lobbies",
                 emptyText = "You're not in any private lobbies.\nInvites are coming in a later update.",
                 onOpen = { openLobbyId = it },
                 modifier = content,
             )
-            Tab.CreateLobby -> CreateLobbyScreen(
+            MainTab.CreateLobby -> CreateLobbyScreen(
                 user = user,
                 repository = lobbies,
                 onCreated = { openLobbyId = it },
                 modifier = content,
             )
-            Tab.Profile -> ProfileScreen(user, onSignOut, content)
-            Tab.Friends -> Box(content.fillMaxSize(), contentAlignment = Alignment.Center) {
+            MainTab.Profile -> ProfileScreen(
+                user = user,
+                blockedUsers = blockedUsers,
+                onUnblock = { blocked -> scope.launch { runCatching { chat.unblock(user.uid, blocked.uid) } } },
+                onSignOut = onSignOut,
+                modifier = content,
+            )
+            MainTab.Friends -> Box(content.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Friends are coming in a later update.")
             }
         }
