@@ -31,7 +31,10 @@ import kotlinx.coroutines.launch
 import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.auth.validateName
 import se.beachlobbyball.app.chat.BlockedUser
+import se.beachlobbyball.app.friends.Relation
+import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Mode
+import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.profile.MAX_LEVEL_LENGTH
 import se.beachlobbyball.app.profile.Profile
 
@@ -40,6 +43,11 @@ import se.beachlobbyball.app.profile.Profile
 fun ProfileScreen(
     user: AppUser,
     profile: Profile?,
+    recentLobbies: List<Lobby>,
+    recentPlayers: List<Player>,
+    relationTo: (String) -> Relation,
+    onOpenLobby: (String) -> Unit,
+    onAddFriend: (Player) -> Unit,
     blockedUsers: List<BlockedUser>,
     onSave: suspend (Profile) -> Unit,
     onUnblock: (BlockedUser) -> Unit,
@@ -122,6 +130,43 @@ fun ProfileScreen(
 
         message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         Button(onClick = ::save, enabled = changed && !busy) { Text("Save") }
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Text("Recently joined lobbies", style = MaterialTheme.typography.titleMedium)
+        if (recentLobbies.isEmpty()) {
+            Text(
+                "Lobbies you've played in show up here after they end.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        recentLobbies.forEach { lobby ->
+            LobbyCard(lobby, onClick = { onOpenLobby(lobby.id) })
+        }
+
+        if (recentPlayers.isNotEmpty()) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text("Recently played with", style = MaterialTheme.typography.titleMedium)
+            recentPlayers.forEach { player ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(player.name, modifier = Modifier.weight(1f))
+                    if (!user.isGuest) {
+                        when (relationTo(player.uid)) {
+                            Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
+                            Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Relation.RequestReceived ->
+                                Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Relation.Self -> Unit
+                        }
+                    }
+                }
+            }
+        }
 
         if (blockedUsers.isNotEmpty()) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))

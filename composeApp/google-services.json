@@ -12,7 +12,20 @@
           "package_name": "se.beachlobbyball.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "428022004178-h2d4ji3lauf2u6kuqhbn1cmub4nndfbs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "se.beachlobbyball.app",
+            "certificate_hash": "f0b1742ad28650bd2c0606984c227dafd13ca2a1"
+          }
+        },
+        {
+          "client_id": "428022004178-ros6sblmgrpeii9l9jb1ojmn2ccvmvp3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBVWpsrrtfKt3YWzmGXYMMWRzWjNRdeM_Y"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "428022004178-ros6sblmgrpeii9l9jb1ojmn2ccvmvp3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

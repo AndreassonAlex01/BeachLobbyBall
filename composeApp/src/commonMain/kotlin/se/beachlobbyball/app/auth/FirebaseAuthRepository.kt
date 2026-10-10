@@ -6,6 +6,7 @@ import dev.gitlive.firebase.auth.FirebaseAuthInvalidUserException
 import dev.gitlive.firebase.auth.FirebaseAuthUserCollisionException
 import dev.gitlive.firebase.auth.FirebaseAuthWeakPasswordException
 import dev.gitlive.firebase.auth.FirebaseUser
+import dev.gitlive.firebase.auth.GoogleAuthProvider
 import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,11 @@ class FirebaseAuthRepository : AuthRepository {
             ?: throw AuthException(GENERIC_ERROR)
         user.updateProfile(displayName = name.trim())
         profileVersion.value++
+    }
+
+    override suspend fun signInWithGoogle(idToken: String) = mapErrors {
+        auth.signInWithCredential(GoogleAuthProvider.credential(idToken, null))
+        Unit
     }
 
     override suspend fun updateName(name: String) = mapErrors {
