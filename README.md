@@ -20,6 +20,10 @@ Open the folder in Android Studio and run the `composeApp` configuration, or fro
 
 Every push and pull request builds a debug APK on GitHub Actions. You can download it from the run's artifacts.
 
+The latest debug APK of `main` is always at
+<https://github.com/AndreassonAlex01/BeachLobbyBall/releases/download/test-build/beachlobbyball-test.apk>,
+ready to install on a phone.
+
 ## Firestore security rules
 
 The rules live in `firestore.rules`. To test them against Firebase's rules test API (nothing is deployed), sign in with `gcloud auth login` and run:
