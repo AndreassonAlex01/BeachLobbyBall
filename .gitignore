@@ -6,5 +6,3 @@ local.properties
 .kotlin/
 .DS_Store
 captures/
-# Firebase config is added per machine, not committed
-google-services.json

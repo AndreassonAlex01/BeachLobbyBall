@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "428022004178",
+    "project_id": "beachlobbyball-75c20",
+    "storage_bucket": "beachlobbyball-75c20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:428022004178:android:4a618f6e6e988de343300b",
+        "android_client_info": {
+          "package_name": "se.beachlobbyball.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVWpsrrtfKt3YWzmGXYMMWRzWjNRdeM_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
