@@ -30,6 +30,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.lobby.upcoming
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.i18n.tr
 
 private sealed interface ListState {
     data object Loading : ListState
@@ -61,7 +62,7 @@ fun LobbyListScreen(
         )
         when (val s = state) {
             ListState.Loading -> Centered { CircularProgressIndicator() }
-            ListState.Failed -> Centered { Text("Couldn't load lobbies. Check your connection.") }
+            ListState.Failed -> Centered { Text(tr("Couldn't load lobbies. Check your connection.", "Kunde inte ladda lobbyer. Kolla din uppkoppling.")) }
             is ListState.Loaded -> if (s.lobbies.isEmpty()) {
                 Centered { Text(emptyText, textAlign = TextAlign.Center) }
             } else {
@@ -102,9 +103,9 @@ fun LobbyCard(lobby: Lobby, onClick: () -> Unit) {
                 lobby.type?.label,
                 lobby.mode?.label,
                 lobby.level,
-                if (lobby.isCourtBooked) "Court booked" else null,
-                if (!lobby.isOpen) "Closed" else null,
-                if (lobby.waitlist.isNotEmpty()) "${lobby.waitlist.size} waiting" else null,
+                if (lobby.isCourtBooked) tr("Court booked", "Bana bokad") else null,
+                if (!lobby.isOpen) tr("Closed", "Stängd") else null,
+                if (lobby.waitlist.isNotEmpty()) tr("${lobby.waitlist.size} waiting", "${lobby.waitlist.size} väntar") else null,
             )
             if (tags.isNotEmpty()) {
                 Text(

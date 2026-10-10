@@ -36,6 +36,7 @@ import se.beachlobbyball.app.invites.InviteRepository
 import se.beachlobbyball.app.invites.JOIN_CODE_LENGTH
 import se.beachlobbyball.app.invites.cleanJoinCode
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.i18n.tr
 
 /** Invites waiting for an answer, joining with a code, and the private lobbies the user is in. */
 @Composable
@@ -56,7 +57,7 @@ fun PrivateLobbiesScreen(
     fun redeem() {
         val clean = cleanJoinCode(code)
         if (clean == null) {
-            error = "A join code is $JOIN_CODE_LENGTH letters and numbers"
+            error = tr("A join code is $JOIN_CODE_LENGTH letters and numbers", "En kod har $JOIN_CODE_LENGTH bokstäver och siffror")
             return
         }
         error = null
@@ -67,7 +68,7 @@ fun PrivateLobbiesScreen(
                 code = ""
                 onOpen(lobbyId)
             } catch (e: Exception) {
-                error = e.message ?: "Something went wrong"
+                error = e.message ?: tr("Something went wrong", "Något gick fel")
             } finally {
                 busy = false
             }
@@ -78,28 +79,28 @@ fun PrivateLobbiesScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Private lobbies", style = MaterialTheme.typography.headlineSmall)
+        Text(tr("Private lobbies", "Privata lobbyer"), style = MaterialTheme.typography.headlineSmall)
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = code,
                 onValueChange = { code = it.take(JOIN_CODE_LENGTH + 2) },
-                label = { Text("Join code") },
+                label = { Text(tr("Join code", "Kod")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                 modifier = Modifier.weight(1f),
             )
-            Button(onClick = ::redeem, enabled = code.isNotBlank() && !busy) { Text("Join") }
+            Button(onClick = ::redeem, enabled = code.isNotBlank() && !busy) { Text(tr("Join", "Gå med")) }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         if (invites.isNotEmpty()) {
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            Text("Invites", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Invites", "Inbjudningar"), style = MaterialTheme.typography.titleMedium)
             invites.forEach { invite ->
                 Card(Modifier.fillMaxWidth().clickable { onOpen(invite.lobbyId) }) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${invite.fromName} invited you", style = MaterialTheme.typography.titleMedium)
+                        Text(tr("${invite.fromName} invited you", "${invite.fromName} bjöd in dig"), style = MaterialTheme.typography.titleMedium)
                         Text(
                             "${invite.locationName} · ${formatDateTime(invite.startsAt, timeZone)}",
                             style = MaterialTheme.typography.bodyMedium,
@@ -107,8 +108,8 @@ fun PrivateLobbiesScreen(
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             TextButton(onClick = {
                                 scope.launch { runCatching { inviteRepository.delete(invite) } }
-                            }) { Text("Decline") }
-                            Button(onClick = { onOpen(invite.lobbyId) }) { Text("View") }
+                            }) { Text(tr("Decline", "Avböj")) }
+                            Button(onClick = { onOpen(invite.lobbyId) }) { Text(tr("View", "Visa")) }
                         }
                     }
                 }
@@ -116,10 +117,10 @@ fun PrivateLobbiesScreen(
         }
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        Text("Your private lobbies", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Your private lobbies", "Dina privata lobbyer"), style = MaterialTheme.typography.titleMedium)
         if (lobbies.isEmpty()) {
             Text(
-                "Private lobbies you join or create show up here.",
+                tr("Private lobbies you join or create show up here.", "Privata lobbyer du går med i eller skapar visas här."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

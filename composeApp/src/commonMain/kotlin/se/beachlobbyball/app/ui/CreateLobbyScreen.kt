@@ -56,6 +56,7 @@ import se.beachlobbyball.app.model.LobbyType
 import se.beachlobbyball.app.model.Mode
 import se.beachlobbyball.app.model.Visibility
 import kotlin.time.Duration.Companion.minutes
+import se.beachlobbyball.app.i18n.tr
 
 private val durationOptions = listOf(60, 90, 120, 180)
 
@@ -127,7 +128,7 @@ fun CreateLobbyScreen(
             try {
                 onCreated(repository.create(lobby, user))
             } catch (e: Exception) {
-                error = "Couldn't create the lobby. Check your connection and try again."
+                error = tr("Couldn't create the lobby. Check your connection and try again.", "Kunde inte skapa lobbyn. Kolla din uppkoppling och försök igen.")
             } finally {
                 busy = false
             }
@@ -141,9 +142,9 @@ fun CreateLobbyScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Create lobby", style = MaterialTheme.typography.headlineSmall)
+        Text(tr("Create lobby", "Skapa lobby"), style = MaterialTheme.typography.headlineSmall)
 
-        Section("Where") {
+        Section(tr("Where", "Var")) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Location.entries.forEach {
                     FilterChip(selected = location == it, onClick = { location = it }, label = { Text(it.label) })
@@ -153,14 +154,14 @@ fun CreateLobbyScreen(
                 OutlinedTextField(
                     value = otherLocationName,
                     onValueChange = { otherLocationName = it },
-                    label = { Text("Place") },
+                    label = { Text(tr("Place", "Plats")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
 
-        Section("When") {
+        Section(tr("When", "När")) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { showDatePicker = true }) {
                     Text(formatDateTime(startsAt, timeZone).substringBefore(","))
@@ -180,7 +181,7 @@ fun CreateLobbyScreen(
             }
         }
 
-        Section("Type") {
+        Section(tr("Type", "Typ")) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LobbyType.entries.forEach {
                     FilterChip(
@@ -192,7 +193,7 @@ fun CreateLobbyScreen(
             }
         }
 
-        Section("Mode") {
+        Section(tr("Mode", "Spelform")) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Mode.entries.forEach {
                     FilterChip(
@@ -204,7 +205,7 @@ fun CreateLobbyScreen(
             }
         }
 
-        Section("Format") {
+        Section(tr("Format", "Format")) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Format.entries.forEach {
                     FilterChip(
@@ -224,7 +225,7 @@ fun CreateLobbyScreen(
             OutlinedTextField(
                 value = maxPlayersText,
                 onValueChange = { maxPlayersText = it.filter(Char::isDigit).take(2) },
-                label = { Text("Max players") },
+                label = { Text(tr("Max players", "Max antal spelare")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
@@ -232,27 +233,27 @@ fun CreateLobbyScreen(
             OutlinedTextField(
                 value = level,
                 onValueChange = { level = it.take(30) },
-                label = { Text("Level") },
-                placeholder = { Text("e.g. Series 3") },
+                label = { Text(tr("Level", "Nivå")) },
+                placeholder = { Text(tr("e.g. Series 3", "t.ex. Serie 3")) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
         }
 
-        SwitchRow("Private (invite only)", isPrivate) { isPrivate = it }
+        SwitchRow(tr("Private (invite only)", "Privat (endast inbjudna)"), isPrivate) { isPrivate = it }
         if (isPrivate) {
             Text(
-                "Only friends you invite, or people you give the join code to, can join.",
+                tr("Only friends you invite, or people you give the join code to, can join.", "Bara vänner du bjuder in, eller som får koden av dig, kan gå med."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        SwitchRow("Court booked", isCourtBooked) { isCourtBooked = it }
+        SwitchRow(tr("Court booked", "Bana bokad"), isCourtBooked) { isCourtBooked = it }
         if (isCourtBooked) {
             OutlinedTextField(
                 value = courtNumber,
                 onValueChange = { courtNumber = it.take(10) },
-                label = { Text("Court") },
+                label = { Text(tr("Court", "Bana")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -261,7 +262,7 @@ fun CreateLobbyScreen(
         OutlinedTextField(
             value = note,
             onValueChange = { note = it.take(300) },
-            label = { Text("Note (optional)") },
+            label = { Text(tr("Note (optional)", "Meddelande (valfritt)")) },
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -269,7 +270,7 @@ fun CreateLobbyScreen(
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Button(onClick = ::submit, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("Create lobby")
+            Text(tr("Create lobby", "Skapa lobby"))
         }
     }
 
@@ -283,7 +284,7 @@ fun CreateLobbyScreen(
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(tr("Cancel", "Avbryt")) } },
         ) {
             DatePicker(state = state)
         }
@@ -300,7 +301,7 @@ fun CreateLobbyScreen(
                     showTimePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(tr("Cancel", "Avbryt")) } },
             text = { TimePicker(state = state) },
         )
     }

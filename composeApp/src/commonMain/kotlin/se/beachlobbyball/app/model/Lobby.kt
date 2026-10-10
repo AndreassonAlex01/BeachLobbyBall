@@ -2,24 +2,31 @@ package se.beachlobbyball.app.model
 
 import kotlinx.datetime.Instant
 import kotlin.time.Duration
+import se.beachlobbyball.app.i18n.tr
 
-enum class Location(val label: String) {
-    GBC("GBC"),
-    Skatas("Skatås"),
-    Other("Other"),
+enum class Location(private val english: String, private val swedish: String) {
+    GBC("GBC", "GBC"),
+    Skatas("Skatås", "Skatås"),
+    Other("Other", "Annan plats");
+
+    val label: String get() = tr(english, swedish)
 }
 
-enum class LobbyType(val label: String) {
-    Men("Men"),
-    Women("Women"),
-    Mixed("Mixed"),
-    Any("Any"),
+enum class LobbyType(private val english: String, private val swedish: String) {
+    Men("Men", "Herr"),
+    Women("Women", "Dam"),
+    Mixed("Mixed", "Mixed"),
+    Any("Any", "Alla");
+
+    val label: String get() = tr(english, swedish)
 }
 
-enum class Mode(val label: String) {
-    Sparring("Sparring"),
-    Casual("Casual"),
-    Practice("Practice"),
+enum class Mode(private val english: String, private val swedish: String) {
+    Sparring("Sparring", "Sparring"),
+    Casual("Casual", "Avslappnat"),
+    Practice("Practice", "Träning");
+
+    val label: String get() = tr(english, swedish)
 }
 
 enum class Format(val label: String, val players: Int) {
@@ -65,7 +72,7 @@ data class Lobby(
     val isFull: Boolean get() = maxPlayers != null && players.size >= maxPlayers
 
     val locationName: String
-        get() = if (location == Location.Other) otherLocationName?.takeIf { it.isNotBlank() } ?: "Other"
+        get() = if (location == Location.Other) otherLocationName?.takeIf { it.isNotBlank() } ?: Location.Other.label
         else location.label
 
     fun hasPlayer(uid: String): Boolean = players.any { it.uid == uid }

@@ -13,6 +13,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import se.beachlobbyball.app.R
 import se.beachlobbyball.app.auth.AuthException
 import se.beachlobbyball.app.auth.GoogleIdTokenSource
+import se.beachlobbyball.app.i18n.tr
 
 @Composable
 actual fun rememberGoogleIdTokenSource(): GoogleIdTokenSource? {
@@ -43,4 +44,5 @@ actual fun rememberGoogleIdTokenSource(): GoogleIdTokenSource? {
     }
 }
 
-private const val GOOGLE_ERROR = "Google sign-in isn't available right now. Try email instead."
+private val GOOGLE_ERROR: String
+    get() = tr("Google sign-in isn't available right now. Try email instead.", "Google-inloggning fungerar inte just nu. Använd e-post i stället.")

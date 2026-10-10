@@ -49,13 +49,16 @@ import se.beachlobbyball.app.lobby.recentlyPlayedWith
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
 import se.beachlobbyball.app.profile.ProfileRepository
+import se.beachlobbyball.app.i18n.tr
 
-enum class MainTab(val label: String, val icon: ImageVector) {
-    PublicLobbies("Public", Icons.Filled.Public),
-    PrivateLobbies("Private", Icons.Filled.Lock),
-    CreateLobby("Create", Icons.Filled.AddCircle),
-    Friends("Friends", Icons.Filled.People),
-    Profile("Profile", Icons.Filled.Person),
+enum class MainTab(private val english: String, private val swedish: String, val icon: ImageVector) {
+    PublicLobbies("Public", "Öppna", Icons.Filled.Public),
+    PrivateLobbies("Private", "Privata", Icons.Filled.Lock),
+    CreateLobby("Create", "Skapa", Icons.Filled.AddCircle),
+    Friends("Friends", "Vänner", Icons.Filled.People),
+    Profile("Profile", "Profil", Icons.Filled.Person);
+
+    val label: String get() = tr(english, swedish)
 }
 
 /** Listens to a Firestore flow, showing [fallback] until it emits or if it fails. */
@@ -163,8 +166,8 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
         } else when (selected) {
             MainTab.PublicLobbies -> LobbyListScreen(
                 source = publicLobbies,
-                title = "Public lobbies",
-                emptyText = "No upcoming public lobbies yet.\nCreate one from the Create tab.",
+                title = tr("Public lobbies", "Öppna lobbyer"),
+                emptyText = tr("No upcoming public lobbies yet.\nCreate one from the Create tab.", "Inga kommande öppna lobbyer än.\nSkapa en under Skapa."),
                 onOpen = { openLobbyId = it },
                 modifier = content,
             )

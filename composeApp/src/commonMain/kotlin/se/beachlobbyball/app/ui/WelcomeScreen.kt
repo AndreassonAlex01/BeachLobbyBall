@@ -35,6 +35,7 @@ import se.beachlobbyball.app.auth.GoogleIdTokenSource
 import se.beachlobbyball.app.auth.validateEmail
 import se.beachlobbyball.app.auth.validateName
 import se.beachlobbyball.app.auth.validatePassword
+import se.beachlobbyball.app.i18n.tr
 
 private enum class WelcomeMode { Choose, Guest, SignIn, CreateAccount }
 
@@ -99,7 +100,7 @@ fun WelcomeScreen(auth: AuthRepository) {
     ) {
         Text("BeachLobbyBall", style = MaterialTheme.typography.headlineLarge)
         Text(
-            "Find and organize beach volleyball games",
+            tr("Find and organize beach volleyball games", "Hitta och ordna beachvolleybollmatcher"),
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(16.dp))
@@ -111,22 +112,22 @@ fun WelcomeScreen(auth: AuthRepository) {
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Continue with Google")
+                    Text(tr("Continue with Google", "Fortsätt med Google"))
                 }
             }
             OutlinedButton(onClick = { mode = WelcomeMode.SignIn }, modifier = Modifier.fillMaxWidth()) {
-                Text("Sign in with email")
+                Text(tr("Sign in with email", "Logga in med e-post"))
             }
             OutlinedButton(
                 onClick = { mode = WelcomeMode.CreateAccount },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Create account")
+                Text(tr("Create account", "Skapa konto"))
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             TextButton(onClick = { mode = WelcomeMode.Guest }) {
-                Text("Continue as guest")
+                Text(tr("Continue as guest", "Fortsätt som gäst"))
             }
             return@Column
         }
@@ -135,7 +136,7 @@ fun WelcomeScreen(auth: AuthRepository) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
+                label = { Text(tr("Name", "Namn")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -144,7 +145,7 @@ fun WelcomeScreen(auth: AuthRepository) {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text(tr("Email", "E-post")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
@@ -152,7 +153,7 @@ fun WelcomeScreen(auth: AuthRepository) {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(tr("Password", "Lösenord")) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -167,9 +168,9 @@ fun WelcomeScreen(auth: AuthRepository) {
         Button(onClick = ::submit, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Text(
                 when (mode) {
-                    WelcomeMode.Guest -> "Continue as guest"
-                    WelcomeMode.SignIn -> "Sign in"
-                    else -> "Create account"
+                    WelcomeMode.Guest -> tr("Continue as guest", "Fortsätt som gäst")
+                    WelcomeMode.SignIn -> tr("Sign in", "Logga in")
+                    else -> tr("Create account", "Skapa konto")
                 }
             )
         }
@@ -177,7 +178,7 @@ fun WelcomeScreen(auth: AuthRepository) {
             mode = WelcomeMode.Choose
             error = null
         }) {
-            Text("Back")
+            Text(tr("Back", "Tillbaka"))
         }
     }
 }

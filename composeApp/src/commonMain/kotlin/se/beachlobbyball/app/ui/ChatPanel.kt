@@ -49,6 +49,7 @@ import se.beachlobbyball.app.chat.MAX_MESSAGE_LENGTH
 import se.beachlobbyball.app.chat.cleanMessage
 import se.beachlobbyball.app.chat.visibleTo
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.i18n.tr
 
 private sealed interface ChatState {
     data object Loading : ChatState
@@ -60,7 +61,7 @@ private sealed interface ChatState {
 fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set<String>) {
     if (!lobby.hasPlayer(user.uid)) {
         Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-            Text("Join the lobby to see and send messages.", textAlign = TextAlign.Center)
+            Text(tr("Join the lobby to see and send messages.", "Gå med i lobbyn för att se och skicka meddelanden."), textAlign = TextAlign.Center)
         }
         return
     }
@@ -91,14 +92,14 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
             when (val s = state) {
                 ChatState.Loading -> Unit
                 ChatState.Failed -> Text(
-                    "Couldn't load messages. Check your connection.",
+                    tr("Couldn't load messages. Check your connection.", "Kunde inte ladda meddelanden. Kolla din uppkoppling."),
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 )
                 is ChatState.Loaded -> {
                     val messages = s.messages.visibleTo(blockedIds)
                     if (messages.isEmpty()) {
                         Text(
-                            "No messages yet. Say hi!",
+                            tr("No messages yet. Say hi!", "Inga meddelanden än. Säg hej!"),
                             modifier = Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -114,12 +115,12 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
                                     message = message,
                                     isMine = message.senderId == user.uid,
                                     onDelete = {
-                                        perform("Couldn't delete the message") { chat.delete(lobby.id, message.id) }
+                                        perform(tr("Couldn't delete the message", "Kunde inte radera meddelandet")) { chat.delete(lobby.id, message.id) }
                                     },
                                     onReport = {
-                                        perform("Couldn't send the report") {
+                                        perform(tr("Couldn't send the report", "Kunde inte skicka anmälan")) {
                                             chat.report(user, lobby.id, message)
-                                            notice = "Reported. Thanks for letting us know."
+                                            notice = tr("Reported. Thanks for letting us know.", "Anmält. Tack för att du säger till.")
                                         }
                                     },
                                     onBlock = { toBlock = message },
@@ -146,7 +147,7 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it.take(MAX_MESSAGE_LENGTH) },
-                placeholder = { Text("Message") },
+                placeholder = { Text(tr("Message", "Meddelande")) },
                 maxLines = 4,
                 modifier = Modifier.weight(1f),
             )
@@ -155,12 +156,12 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
                     cleanMessage(draft)?.let { text ->
                         draft = ""
                         notice = null
-                        perform("Couldn't send the message") { chat.send(lobby.id, user, text) }
+                        perform(tr("Couldn't send the message", "Kunde inte skicka meddelandet")) { chat.send(lobby.id, user, text) }
                     }
                 },
                 enabled = cleanMessage(draft) != null,
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = tr("Send", "Skicka"))
             }
         }
     }
@@ -168,15 +169,15 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
     toBlock?.let { message ->
         AlertDialog(
             onDismissRequest = { toBlock = null },
-            title = { Text("Block ${message.senderName}?") },
-            text = { Text("You won't see their messages anymore. You can unblock them from your profile.") },
+            title = { Text(tr("Block ${message.senderName}?", "Blockera ${message.senderName}?")) },
+            text = { Text(tr("You won't see their messages anymore. You can unblock them from your profile.", "Du ser inte deras meddelanden längre. Du kan avblockera dem från din profil.")) },
             confirmButton = {
                 TextButton(onClick = {
                     toBlock = null
-                    perform("Couldn't block the user") { chat.block(user.uid, message.senderId, message.senderName) }
-                }) { Text("Block") }
+                    perform(tr("Couldn't block the user", "Kunde inte blockera användaren")) { chat.block(user.uid, message.senderId, message.senderName) }
+                }) { Text(tr("Block", "Blockera")) }
             },
-            dismissButton = { TextButton(onClick = { toBlock = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { toBlock = null }) { Text(tr("Cancel", "Avbryt")) } },
         )
     }
 }
@@ -226,11 +227,11 @@ private fun MessageBubble(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 if (isMine) {
-                    DropdownMenuItem(text = { Text("Delete") }, onClick = { menuOpen = false; onDelete() })
+                    DropdownMenuItem(text = { Text(tr("Delete", "Radera")) }, onClick = { menuOpen = false; onDelete() })
                 } else {
-                    DropdownMenuItem(text = { Text("Report message") }, onClick = { menuOpen = false; onReport() })
+                    DropdownMenuItem(text = { Text(tr("Report message", "Anmäl meddelande")) }, onClick = { menuOpen = false; onReport() })
                     DropdownMenuItem(
-                        text = { Text("Block ${message.senderName}") },
+                        text = { Text(tr("Block ${message.senderName}", "Blockera ${message.senderName}")) },
                         onClick = { menuOpen = false; onBlock() },
                     )
                 }

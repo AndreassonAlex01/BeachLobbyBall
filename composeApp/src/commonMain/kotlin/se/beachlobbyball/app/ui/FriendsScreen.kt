@@ -49,6 +49,7 @@ import se.beachlobbyball.app.friends.toggleTag
 import se.beachlobbyball.app.friends.withTag
 import se.beachlobbyball.app.profile.Profile
 import se.beachlobbyball.app.profile.ProfileRepository
+import se.beachlobbyball.app.i18n.tr
 
 /** Friends, requests and search. The lists come from MainScreen so other screens can share them. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -65,7 +66,7 @@ fun FriendsScreen(
     if (user.isGuest) {
         Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Friends need an account.\nSign out and choose Create account to add friends.",
+                tr("Friends need an account.\nCreate one on the Profile tab to add friends.", "Vänner kräver ett konto.\nSkapa ett under Profil för att lägga till vänner."),
                 textAlign = TextAlign.Center,
             )
         }
@@ -98,7 +99,7 @@ fun FriendsScreen(
             results = try {
                 profiles.search(query, user.uid)
             } catch (e: Exception) {
-                error = "Search failed. Check your connection."
+                error = tr("Search failed. Check your connection.", "Sökningen misslyckades. Kolla din uppkoppling.")
                 null
             }
             searching = false
@@ -113,18 +114,18 @@ fun FriendsScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { Text("Friends", style = MaterialTheme.typography.headlineSmall) }
+        item { Text(tr("Friends", "Vänner"), style = MaterialTheme.typography.headlineSmall) }
 
         item {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Find people by name or email") },
+                label = { Text(tr("Find people by name or email", "Hitta folk på namn eller e-post")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { search() }),
                 trailingIcon = {
-                    TextButton(onClick = ::search, enabled = !searching && query.isNotBlank()) { Text("Search") }
+                    TextButton(onClick = ::search, enabled = !searching && query.isNotBlank()) { Text(tr("Search", "Sök")) }
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -133,7 +134,7 @@ fun FriendsScreen(
 
         results?.let { found ->
             if (found.isEmpty()) {
-                item { Text("No one found. Names match from the start; emails must match exactly.") }
+                item { Text(tr("No one found. Names match from the start; emails must match exactly.", "Ingen hittades. Namn matchar från början, e-post måste stämma exakt.")) }
             }
             items(found, key = { "result-${it.uid}" }) { profile ->
                 PersonRow(
@@ -141,13 +142,13 @@ fun FriendsScreen(
                     detail = profile.level,
                     relation = relationTo(profile.uid, user.uid, friends, incoming, outgoing),
                     onAdd = {
-                        perform("Couldn't send the request") {
+                        perform(tr("Couldn't send the request", "Kunde inte skicka förfrågan")) {
                             friendsRepository.sendRequest(user, profile.uid, profile.name)
                         }
                     },
                     onAccept = {
                         incoming.firstOrNull { it.fromId == profile.uid }?.let { request ->
-                            perform("Couldn't accept the request") { friendsRepository.accept(user, request) }
+                            perform(tr("Couldn't accept the request", "Kunde inte godkänna förfrågan")) { friendsRepository.accept(user, request) }
                         }
                     },
                 )
@@ -156,7 +157,7 @@ fun FriendsScreen(
         }
 
         if (incoming.isNotEmpty()) {
-            item { Text("Friend requests", style = MaterialTheme.typography.titleMedium) }
+            item { Text(tr("Friend requests", "Vänförfrågningar"), style = MaterialTheme.typography.titleMedium) }
             items(incoming, key = { "in-${it.id}" }) { request ->
                 Row(
                     Modifier.fillMaxWidth(),
@@ -165,17 +166,17 @@ fun FriendsScreen(
                 ) {
                     Text(request.fromName, modifier = Modifier.weight(1f))
                     TextButton(onClick = {
-                        perform("Couldn't decline the request") { friendsRepository.deleteRequest(request) }
-                    }) { Text("Decline") }
+                        perform(tr("Couldn't decline the request", "Kunde inte avböja förfrågan")) { friendsRepository.deleteRequest(request) }
+                    }) { Text(tr("Decline", "Avböj")) }
                     OutlinedButton(onClick = {
-                        perform("Couldn't accept the request") { friendsRepository.accept(user, request) }
-                    }) { Text("Accept") }
+                        perform(tr("Couldn't accept the request", "Kunde inte godkänna förfrågan")) { friendsRepository.accept(user, request) }
+                    }) { Text(tr("Accept", "Godkänn")) }
                 }
             }
         }
 
         if (outgoing.isNotEmpty()) {
-            item { Text("Sent requests", style = MaterialTheme.typography.titleMedium) }
+            item { Text(tr("Sent requests", "Skickade förfrågningar"), style = MaterialTheme.typography.titleMedium) }
             items(outgoing, key = { "out-${it.id}" }) { request ->
                 Row(
                     Modifier.fillMaxWidth(),
@@ -184,15 +185,15 @@ fun FriendsScreen(
                 ) {
                     Text(request.toName, modifier = Modifier.weight(1f))
                     TextButton(onClick = {
-                        perform("Couldn't cancel the request") { friendsRepository.deleteRequest(request) }
-                    }) { Text("Cancel") }
+                        perform(tr("Couldn't cancel the request", "Kunde inte ta tillbaka förfrågan")) { friendsRepository.deleteRequest(request) }
+                    }) { Text(tr("Cancel", "Avbryt")) }
                 }
             }
         }
 
         item {
             Text(
-                "Your friends (${friends.size})",
+                tr("Your friends (${friends.size})", "Dina vänner (${friends.size})"),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -200,7 +201,7 @@ fun FriendsScreen(
         if (tags.isNotEmpty()) {
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = tagFilter == null, onClick = { tagFilter = null }, label = { Text("All") })
+                    FilterChip(selected = tagFilter == null, onClick = { tagFilter = null }, label = { Text(tr("All", "Alla")) })
                     tags.forEach { tag ->
                         FilterChip(
                             selected = tagFilter.equals(tag, ignoreCase = true),
@@ -214,7 +215,7 @@ fun FriendsScreen(
         if (friends.isEmpty()) {
             item {
                 Text(
-                    "No friends yet. Search above, or add people from a lobby's player list.",
+                    tr("No friends yet. Search above, or add people from a lobby's player list.", "Inga vänner än. Sök ovan, eller lägg till folk från en lobbys spelarlista."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -243,11 +244,11 @@ fun FriendsScreen(
             onDismiss = { editing = null },
             onSave = { updated ->
                 editing = null
-                perform("Couldn't save the tags") { friendsRepository.save(user.uid, updated) }
+                perform(tr("Couldn't save the tags", "Kunde inte spara taggarna")) { friendsRepository.save(user.uid, updated) }
             },
             onRemove = {
                 editing = null
-                perform("Couldn't remove the friend") { friendsRepository.remove(user.uid, friend.uid) }
+                perform(tr("Couldn't remove the friend", "Kunde inte ta bort vännen")) { friendsRepository.remove(user.uid, friend.uid) }
             },
         )
     }
@@ -273,10 +274,10 @@ private fun PersonRow(
             }
         }
         when (relation) {
-            Relation.None -> OutlinedButton(onClick = onAdd) { Text("Add") }
-            Relation.RequestReceived -> OutlinedButton(onClick = onAccept) { Text("Accept") }
-            Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Relation.None -> OutlinedButton(onClick = onAdd) { Text(tr("Add", "Lägg till")) }
+            Relation.RequestReceived -> OutlinedButton(onClick = onAccept) { Text(tr("Accept", "Godkänn")) }
+            Relation.RequestSent -> Text(tr("Requested", "Förfrågan skickad"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Relation.Friend -> Text(tr("Friend", "Vän"), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Relation.Self -> Unit
         }
     }
@@ -300,10 +301,10 @@ private fun FriendDialog(
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
-            title = { Text("Remove ${friend.name}?") },
-            text = { Text("You'll both be removed from each other's friend lists.") },
-            confirmButton = { TextButton(onClick = onRemove) { Text("Remove") } },
-            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } },
+            title = { Text(tr("Remove ${friend.name}?", "Ta bort ${friend.name}?")) },
+            text = { Text(tr("You'll both be removed from each other's friend lists.", "Ni tas bort från varandras vänlistor.")) },
+            confirmButton = { TextButton(onClick = onRemove) { Text(tr("Remove", "Ta bort")) } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(tr("Cancel", "Avbryt")) } },
         )
         return
     }
@@ -313,7 +314,7 @@ private fun FriendDialog(
         title = { Text(friend.name) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Tags are private. ${friend.name} can't see them.", style = MaterialTheme.typography.bodySmall)
+                Text(tr("Tags are private. ${friend.name} can't see them.", "Taggar är privata. ${friend.name} kan inte se dem."), style = MaterialTheme.typography.bodySmall)
                 if (options.isNotEmpty()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         options.forEach { tag ->
@@ -329,7 +330,7 @@ private fun FriendDialog(
                     OutlinedTextField(
                         value = newTag,
                         onValueChange = { newTag = it },
-                        label = { Text("New tag") },
+                        label = { Text(tr("New tag", "Ny tagg")) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
@@ -342,16 +343,16 @@ private fun FriendDialog(
                             }
                             newTag = ""
                         },
-                        label = { Text("Add") },
+                        label = { Text(tr("Add", "Lägg till")) },
                         modifier = Modifier.padding(start = 8.dp),
                     )
                 }
                 TextButton(onClick = { confirmRemove = true }) {
-                    Text("Remove friend", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Remove friend", "Ta bort vän"), color = MaterialTheme.colorScheme.error)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(current) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onSave(current) }) { Text(tr("Save", "Spara")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel", "Avbryt")) } },
     )
 }
