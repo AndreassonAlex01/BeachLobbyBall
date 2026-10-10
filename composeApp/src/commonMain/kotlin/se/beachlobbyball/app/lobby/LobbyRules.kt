@@ -9,6 +9,7 @@ import kotlinx.datetime.toLocalDateTime
 import se.beachlobbyball.app.model.Location
 import se.beachlobbyball.app.model.Lobby
 import kotlin.time.Duration
+import se.beachlobbyball.app.i18n.tr
 
 const val MIN_PLAYERS = 2
 const val MAX_PLAYERS = 40
@@ -28,14 +29,16 @@ fun parseMaxPlayers(text: String): Result<Int?> {
     if (trimmed.isEmpty()) return Result.success(null)
     val value = trimmed.toIntOrNull()
     return if (value != null && value in MIN_PLAYERS..MAX_PLAYERS) Result.success(value)
-    else Result.failure(IllegalArgumentException("Max players must be between $MIN_PLAYERS and $MAX_PLAYERS"))
+    else Result.failure(IllegalArgumentException(
+        tr("Max players must be between $MIN_PLAYERS and $MAX_PLAYERS", "Max antal spelare måste vara mellan $MIN_PLAYERS och $MAX_PLAYERS"),
+    ))
 }
 
 /** Returns an error message for a lobby about to be created, or null when it's fine. */
 fun validateNewLobby(lobby: Lobby, now: Instant): String? = when {
-    lobby.location == Location.Other && lobby.otherLocationName.isNullOrBlank() -> "Enter where you're playing"
-    lobby.startsAt <= now -> "Pick a start time in the future"
-    lobby.duration <= Duration.ZERO -> "Pick a duration"
+    lobby.location == Location.Other && lobby.otherLocationName.isNullOrBlank() -> tr("Enter where you're playing", "Skriv var ni spelar")
+    lobby.startsAt <= now -> tr("Pick a start time in the future", "Välj en starttid framåt i tiden")
+    lobby.duration <= Duration.ZERO -> tr("Pick a duration", "Välj hur länge ni spelar")
     else -> null
 }
 

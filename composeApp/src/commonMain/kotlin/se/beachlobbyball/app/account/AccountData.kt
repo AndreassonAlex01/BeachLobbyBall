@@ -12,6 +12,7 @@ import se.beachlobbyball.app.auth.SignInMethod
 import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.profile.EmailIndexDocument
 import se.beachlobbyball.app.profile.emailKey
+import se.beachlobbyball.app.i18n.tr
 
 /** Deletes everything stored about a user. Safe to run again if it stops halfway. */
 class AccountData(private val lobbies: LobbyRepository) {
@@ -64,7 +65,7 @@ suspend fun deleteAccount(
     when (user.method) {
         SignInMethod.Email -> auth.confirmWithPassword(password.orEmpty())
         SignInMethod.Google -> {
-            val source = google ?: throw AuthException("Google sign-in isn't available on this phone.")
+            val source = google ?: throw AuthException(tr("Google sign-in isn't available on this phone.", "Google-inloggning finns inte på den här telefonen."))
             auth.confirmWithGoogle(source.requestIdToken() ?: return false)
         }
         SignInMethod.Guest -> Unit
@@ -72,7 +73,9 @@ suspend fun deleteAccount(
     try {
         data.deleteAll(user)
     } catch (e: Exception) {
-        throw AuthException("Couldn't delete everything. Check your connection and try again.")
+        throw AuthException(
+            tr("Couldn't delete everything. Check your connection and try again.", "Kunde inte radera allt. Kolla din uppkoppling och försök igen."),
+        )
     }
     try {
         auth.deleteAccount()

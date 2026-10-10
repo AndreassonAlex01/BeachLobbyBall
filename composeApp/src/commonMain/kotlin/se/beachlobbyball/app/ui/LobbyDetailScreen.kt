@@ -53,6 +53,7 @@ import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
+import se.beachlobbyball.app.i18n.tr
 
 private sealed interface DetailState {
     data object Loading : DetailState
@@ -89,18 +90,18 @@ fun LobbyDetailScreen(
     Column(modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back", "Tillbaka"))
             }
             Text("Lobby", style = MaterialTheme.typography.titleLarge)
         }
         when (val s = state) {
             DetailState.Loading -> Message { CircularProgressIndicator() }
-            DetailState.Gone -> Message { Text("This lobby was deleted.") }
-            DetailState.Failed -> Message { Text("Couldn't load the lobby. Check your connection.") }
+            DetailState.Gone -> Message { Text(tr("This lobby was deleted.", "Lobbyn har raderats.")) }
+            DetailState.Failed -> Message { Text(tr("Couldn't load the lobby. Check your connection.", "Kunde inte ladda lobbyn. Kolla din uppkoppling.")) }
             is DetailState.Loaded -> {
                 TabRow(selectedTabIndex = if (showChat) 1 else 0) {
-                    Tab(selected = !showChat, onClick = { showChat = false }, text = { Text("Details") })
-                    Tab(selected = showChat, onClick = { showChat = true }, text = { Text("Chat") })
+                    Tab(selected = !showChat, onClick = { showChat = false }, text = { Text(tr("Details", "Detaljer")) })
+                    Tab(selected = showChat, onClick = { showChat = true }, text = { Text(tr("Chat", "Chatt")) })
                 }
                 if (showChat) {
                     ChatPanel(s.lobby, user, chat, blockedIds)
@@ -162,7 +163,7 @@ private fun LobbyDetails(
             try {
                 action()
             } catch (e: Exception) {
-                error = e.message ?: "Something went wrong"
+                error = e.message ?: tr("Something went wrong", "Något gick fel")
             } finally {
                 busy = false
             }
@@ -179,20 +180,21 @@ private fun LobbyDetails(
             style = MaterialTheme.typography.titleMedium,
         )
 
-        InfoRow("Host", lobby.hostName)
-        lobby.type?.let { InfoRow("Type", it.label) }
-        lobby.mode?.let { InfoRow("Mode", it.label) }
-        lobby.format?.let { InfoRow("Format", it.label) }
-        lobby.level?.let { InfoRow("Level", it) }
-        InfoRow("Players", formatPlayerCount(lobby))
-        if (lobby.waitlist.isNotEmpty()) InfoRow("Waiting", "${lobby.waitlist.size}")
+        InfoRow(tr("Host", "Värd"), lobby.hostName)
+        lobby.type?.let { InfoRow(tr("Type", "Typ"), it.label) }
+        lobby.mode?.let { InfoRow(tr("Mode", "Spelform"), it.label) }
+        lobby.format?.let { InfoRow(tr("Format", "Format"), it.label) }
+        lobby.level?.let { InfoRow(tr("Level", "Nivå"), it) }
+        InfoRow(tr("Players", "Spelare"), formatPlayerCount(lobby))
+        if (lobby.waitlist.isNotEmpty()) InfoRow(tr("Waiting", "Väntar"), "${lobby.waitlist.size}")
         InfoRow(
-            "Court",
-            if (lobby.isCourtBooked) listOfNotNull("Booked", lobby.courtNumber).joinToString(", ") else "Not booked",
+            tr("Court", "Bana"),
+            if (lobby.isCourtBooked) listOfNotNull(tr("Booked", "Bokad"), lobby.courtNumber).joinToString(", ")
+            else tr("Not booked", "Inte bokad"),
         )
-        InfoRow("Lobby", listOf(
-            if (lobby.visibility == Visibility.Private) "Private" else "Public",
-            if (lobby.isOpen) "Open" else "Closed",
+        InfoRow(tr("Lobby", "Lobby"), listOf(
+            if (lobby.visibility == Visibility.Private) tr("Private", "Privat") else tr("Public", "Öppen"),
+            if (lobby.isOpen) tr("Open", "Tar emot spelare") else tr("Closed", "Stängd"),
         ).joinToString(", "))
         lobby.note?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
@@ -206,20 +208,20 @@ private fun LobbyDetails(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Join code", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Join code", "Kod"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(code, style = MaterialTheme.typography.titleLarge)
                 }
-                TextButton(onClick = { clipboard.setText(AnnotatedString(code)) }) { Text("Copy") }
+                TextButton(onClick = { clipboard.setText(AnnotatedString(code)) }) { Text(tr("Copy", "Kopiera")) }
             }
             Text(
-                "Anyone with this code can join. Share it in a group chat, or invite friends below.",
+                tr("Anyone with this code can join. Share it in a group chat, or invite friends below.", "Alla med koden kan gå med. Dela den i en gruppchatt, eller bjud in vänner nedan."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        Text("Players", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Players", "Spelare"), style = MaterialTheme.typography.titleMedium)
         lobby.players.forEach { player ->
             PlayerRow(
                 player = player,
@@ -232,7 +234,7 @@ private fun LobbyDetails(
             )
         }
         if (lobby.waitlist.isNotEmpty()) {
-            Text("Waitlist", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(tr("Waitlist", "Väntelista"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             lobby.waitlist.forEachIndexed { index, player ->
                 PlayerRow(
                     player = player,
@@ -253,7 +255,7 @@ private fun LobbyDetails(
         // Guests can't have friends, so only accounts invite.
         if (isPlayer && !user.isGuest && !lobby.hasEnded(now)) {
             Button(onClick = { inviting = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Invite friends")
+                Text(tr("Invite friends", "Bjud in vänner"))
             }
         }
 
@@ -264,14 +266,14 @@ private fun LobbyDetails(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (lobby.isOpen) "Close lobby to new players" else "Reopen lobby")
+                    Text(if (lobby.isOpen) tr("Close lobby to new players", "Stäng lobbyn för nya spelare") else tr("Reopen lobby", "Öppna lobbyn igen"))
                 }
                 TextButton(
                     onClick = { confirmDelete = true },
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Delete lobby", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Delete lobby", "Radera lobby"), color = MaterialTheme.colorScheme.error)
                 }
             }
             isPlayer || isWaiting -> OutlinedButton(
@@ -279,7 +281,7 @@ private fun LobbyDetails(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (isWaiting) "Leave waitlist" else "Leave lobby")
+                Text(if (isWaiting) tr("Leave waitlist", "Lämna väntelistan") else tr("Leave lobby", "Lämna lobbyn"))
             }
             else -> Button(
                 onClick = { perform { repository.join(lobby.id, user, hasInvite) } },
@@ -288,10 +290,10 @@ private fun LobbyDetails(
             ) {
                 Text(
                     when {
-                        !lobby.isOpen || lobby.hasEnded(now) -> "Lobby is closed"
-                        !mayEnter -> "Invite only"
-                        joinsWaitlist -> "Join waitlist"
-                        else -> "Join lobby"
+                        !lobby.isOpen || lobby.hasEnded(now) -> tr("Lobby is closed", "Lobbyn är stängd")
+                        !mayEnter -> tr("Invite only", "Endast inbjudna")
+                        joinsWaitlist -> tr("Join waitlist", "Ställ dig i kö")
+                        else -> tr("Join lobby", "Gå med")
                     }
                 )
             }
@@ -301,8 +303,8 @@ private fun LobbyDetails(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this lobby?") },
-            text = { Text("Everyone in it will lose access. This can't be undone.") },
+            title = { Text(tr("Delete this lobby?", "Radera lobbyn?")) },
+            text = { Text(tr("Everyone in it will lose access. This can't be undone.", "Alla i den förlorar åtkomst. Det går inte att ångra.")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
@@ -310,9 +312,9 @@ private fun LobbyDetails(
                         repository.delete(lobby)
                         onDeleted()
                     }
-                }) { Text("Delete") }
+                }) { Text(tr("Delete", "Radera")) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Cancel", "Avbryt")) } },
         )
     }
 
@@ -323,15 +325,15 @@ private fun LobbyDetails(
     removing?.let { player ->
         AlertDialog(
             onDismissRequest = { removing = null },
-            title = { Text("Remove ${player.name}?") },
-            text = { Text("They can join again unless you close the lobby.") },
+            title = { Text(tr("Remove ${player.name}?", "Ta bort ${player.name}?")) },
+            text = { Text(tr("They can join again unless you close the lobby.", "De kan gå med igen om du inte stänger lobbyn.")) },
             confirmButton = {
                 TextButton(onClick = {
                     removing = null
                     perform { repository.remove(lobby.id, player.uid) }
-                }) { Text("Remove") }
+                }) { Text(tr("Remove", "Ta bort")) }
             },
-            dismissButton = { TextButton(onClick = { removing = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text(tr("Cancel", "Avbryt")) } },
         )
     }
 }
@@ -358,8 +360,8 @@ private fun PlayerRow(
             buildString {
                 position?.let { append("$it. ") }
                 append(player.name)
-                if (lobby.isHost(player.uid)) append(" (host)")
-                if (player.uid == user.uid) append(" (you)")
+                if (lobby.isHost(player.uid)) append(tr(" (host)", " (värd)"))
+                if (player.uid == user.uid) append(tr(" (you)", " (du)"))
             },
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
@@ -367,22 +369,22 @@ private fun PlayerRow(
         // Guests can't have friends, so they don't get the button.
         if (!user.isGuest) {
             when (relationTo(player.uid)) {
-                Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
-                Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Relation.RequestReceived -> Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text(tr("Add friend", "Lägg till vän")) }
+                Relation.RequestSent -> Text(tr("Requested", "Förfrågan skickad"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.RequestReceived -> Text(tr("Wants to be friends", "Vill bli vän"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Relation.Friend -> Text(tr("Friend", "Vän"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Relation.Self -> Unit
             }
         }
         if (lobby.isHost(user.uid) && player.uid != user.uid) {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "More for ${player.name}")
+                    Icon(Icons.Filled.MoreVert, contentDescription = tr("More for ${player.name}", "Mer för ${player.name}"))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     if (onMakeHost != null) {
                         DropdownMenuItem(
-                            text = { Text("Make host") },
+                            text = { Text(tr("Make host", "Gör till värd")) },
                             onClick = {
                                 menuOpen = false
                                 onMakeHost()
@@ -390,7 +392,7 @@ private fun PlayerRow(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Remove from lobby") },
+                        text = { Text(tr("Remove from lobby", "Ta bort från lobbyn")) },
                         onClick = {
                             menuOpen = false
                             onRemove()

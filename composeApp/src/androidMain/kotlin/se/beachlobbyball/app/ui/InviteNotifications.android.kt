@@ -19,6 +19,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.R
 import se.beachlobbyball.app.invites.Invite
+import se.beachlobbyball.app.i18n.tr
 
 private const val CHANNEL_ID = "invites"
 
@@ -52,7 +53,7 @@ private fun notify(context: Context, invite: Invite) {
     val manager = NotificationManagerCompat.from(context)
     manager.createNotificationChannel(
         NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-            .setName("Lobby invites")
+            .setName(tr("Lobby invites", "Inbjudningar till lobbyer"))
             .build()
     )
     val open = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -61,7 +62,7 @@ private fun notify(context: Context, invite: Invite) {
     )
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_notification)
-        .setContentTitle("${invite.fromName} invited you")
+        .setContentTitle(tr("${invite.fromName} invited you", "${invite.fromName} bjöd in dig"))
         .setContentText("${invite.locationName}, ${formatDateTime(invite.startsAt, TimeZone.currentSystemDefault())}")
         .setContentIntent(tap)
         .setAutoCancel(true)

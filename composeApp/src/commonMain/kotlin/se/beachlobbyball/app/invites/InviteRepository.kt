@@ -9,6 +9,7 @@ import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.friends.Friend
 import se.beachlobbyball.app.lobby.LobbyException
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.i18n.tr
 
 class InviteRepository {
     private val firestore = Firebase.firestore
@@ -47,12 +48,12 @@ class InviteRepository {
     suspend fun redeem(user: AppUser, code: String): String {
         val lobbyId = try {
             val snapshot = codes.document(code).get()
-            if (!snapshot.exists) throw LobbyException("No lobby has that code. Check it and try again.")
+            if (!snapshot.exists) throw LobbyException(tr("No lobby has that code. Check it and try again.", "Ingen lobby har den koden. Kolla den och försök igen."))
             snapshot.data<LobbyCodeDocument>().lobbyId
         } catch (e: LobbyException) {
             throw e
         } catch (e: Exception) {
-            throw LobbyException("Something went wrong. Check your connection and try again.")
+            throw LobbyException(tr("Something went wrong. Check your connection and try again.", "Något gick fel. Kolla din uppkoppling och försök igen."))
         }
         try {
             invites.document(inviteId(lobbyId, user.uid)).set(
@@ -66,7 +67,7 @@ class InviteRepository {
                 )
             )
         } catch (e: Exception) {
-            throw LobbyException("Something went wrong. Check your connection and try again.")
+            throw LobbyException(tr("Something went wrong. Check your connection and try again.", "Något gick fel. Kolla din uppkoppling och försök igen."))
         }
         return lobbyId
     }

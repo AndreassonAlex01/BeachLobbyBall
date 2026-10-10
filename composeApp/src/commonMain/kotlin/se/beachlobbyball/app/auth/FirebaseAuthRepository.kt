@@ -13,6 +13,7 @@ import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import se.beachlobbyball.app.i18n.tr
 
 /** Thrown with a message that can be shown to the user as is. */
 class AuthException(message: String) : Exception(message)
@@ -29,7 +30,7 @@ class FirebaseAuthRepository : AuthRepository {
         }
 
     override suspend fun continueAsGuest(name: String) = mapErrors {
-        val user = auth.signInAnonymously().user ?: throw AuthException(GENERIC_ERROR)
+        val user = auth.signInAnonymously().user ?: throw AuthException(genericError)
         user.updateProfile(displayName = name.trim())
         profileVersion.value++
     }
@@ -41,7 +42,7 @@ class FirebaseAuthRepository : AuthRepository {
 
     override suspend fun createAccount(name: String, email: String, password: String) = mapErrors {
         val user = auth.createUserWithEmailAndPassword(email.trim(), password).user
-            ?: throw AuthException(GENERIC_ERROR)
+            ?: throw AuthException(genericError)
         user.updateProfile(displayName = name.trim())
         profileVersion.value++
     }
@@ -63,7 +64,7 @@ class FirebaseAuthRepository : AuthRepository {
 
     override suspend fun confirmWithPassword(password: String) = mapErrors {
         val user = currentUser()
-        val email = user.email ?: throw AuthException(GENERIC_ERROR)
+        val email = user.email ?: throw AuthException(genericError)
         user.reauthenticate(EmailAuthProvider.credential(email, password))
     }
 
@@ -76,7 +77,7 @@ class FirebaseAuthRepository : AuthRepository {
     }
 
     override suspend fun updateName(name: String) = mapErrors {
-        val user = auth.currentUser ?: throw AuthException(GENERIC_ERROR)
+        val user = auth.currentUser ?: throw AuthException(genericError)
         user.updateProfile(displayName = name.trim())
         profileVersion.value++
     }
@@ -85,11 +86,11 @@ class FirebaseAuthRepository : AuthRepository {
         auth.signOut()
     }
 
-    private fun currentUser(): FirebaseUser = auth.currentUser ?: throw AuthException(GENERIC_ERROR)
+    private fun currentUser(): FirebaseUser = auth.currentUser ?: throw AuthException(genericError)
 
     private fun FirebaseUser.toAppUser() = AppUser(
         uid = uid,
-        displayName = displayName?.takeIf { it.isNotBlank() } ?: email ?: "Player",
+        displayName = displayName?.takeIf { it.isNotBlank() } ?: email ?: tr("Player", "Spelare"),
         isGuest = isAnonymous,
         email = email,
         method = when {
@@ -106,21 +107,23 @@ class FirebaseAuthRepository : AuthRepository {
         } catch (e: AuthException) {
             throw e
         } catch (e: FirebaseAuthUserCollisionException) {
-            throw AuthException("An account with this email already exists")
+            throw AuthException(tr("An account with this email already exists", "Det finns redan ett konto med den e-postadressen"))
         } catch (e: FirebaseAuthWeakPasswordException) {
-            throw AuthException("Choose a stronger password")
+            throw AuthException(tr("Choose a stronger password", "Välj ett starkare lösenord"))
         } catch (e: FirebaseAuthInvalidUserException) {
-            throw AuthException("Wrong email or password")
+            throw AuthException(tr("Wrong email or password", "Fel e-post eller lösenord"))
         } catch (e: FirebaseAuthInvalidCredentialsException) {
-            throw AuthException("Wrong email or password")
+            throw AuthException(tr("Wrong email or password", "Fel e-post eller lösenord"))
         } catch (e: FirebaseAuthRecentLoginRequiredException) {
-            throw AuthException("For your safety, sign out, sign in again, and then try once more.")
+            throw AuthException(
+                tr("For your safety, sign out, sign in again, and then try once more.", "För din säkerhet: logga ut, logga in igen och försök sedan en gång till."),
+            )
         } catch (e: Exception) {
-            throw AuthException(GENERIC_ERROR)
+            throw AuthException(genericError)
         }
     }
 
     private companion object {
-        const val GENERIC_ERROR = "Something went wrong. Check your connection and try again."
+        val genericError: String get() = tr("Something went wrong. Check your connection and try again.", "Något gick fel. Kolla din uppkoppling och försök igen.")
     }
 }

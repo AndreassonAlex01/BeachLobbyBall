@@ -37,6 +37,7 @@ import se.beachlobbyball.app.model.Mode
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.profile.MAX_LEVEL_LENGTH
 import se.beachlobbyball.app.profile.Profile
+import se.beachlobbyball.app.i18n.tr
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -76,9 +77,9 @@ fun ProfileScreen(
         scope.launch {
             message = try {
                 onSave(edited)
-                "Saved"
+                tr("Saved", "Sparat")
             } catch (e: Exception) {
-                "Couldn't save. Check your connection and try again."
+                tr("Couldn't save. Check your connection and try again.", "Kunde inte spara. Kolla din uppkoppling och försök igen.")
             } finally {
                 busy = false
             }
@@ -89,9 +90,9 @@ fun ProfileScreen(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Profile", style = MaterialTheme.typography.headlineSmall)
+        Text(tr("Profile", "Profil"), style = MaterialTheme.typography.headlineSmall)
         Text(
-            if (user.isGuest) "Guest" else user.email ?: "Account",
+            if (user.isGuest) tr("Guest", "Gäst") else user.email ?: tr("Account", "Konto"),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -99,14 +100,14 @@ fun ProfileScreen(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Name") },
+            label = { Text(tr("Name", "Namn")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         if (user.isGuest) {
             Text(
-                "Level and preferred modes are saved with an account.",
+                tr("Level and preferred modes are saved with an account.", "Nivå och spelformer sparas med ett konto."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -114,12 +115,12 @@ fun ProfileScreen(
             OutlinedTextField(
                 value = level,
                 onValueChange = { level = it.take(MAX_LEVEL_LENGTH) },
-                label = { Text("Level (optional)") },
-                placeholder = { Text("e.g. Series 3") },
+                label = { Text(tr("Level (optional)", "Nivå (valfritt)")) },
+                placeholder = { Text(tr("e.g. Series 3", "t.ex. Serie 3")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("Preferred modes (optional)", style = MaterialTheme.typography.titleSmall)
+            Text(tr("Preferred modes (optional)", "Spelformer du gillar (valfritt)"), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Mode.entries.forEach { mode ->
                     FilterChip(
@@ -132,7 +133,7 @@ fun ProfileScreen(
         }
 
         message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-        Button(onClick = ::save, enabled = changed && !busy) { Text("Save") }
+        Button(onClick = ::save, enabled = changed && !busy) { Text(tr("Save", "Spara")) }
 
         if (user.isGuest) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -140,10 +141,10 @@ fun ProfileScreen(
         }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        Text("Recently joined lobbies", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Recently joined lobbies", "Senaste lobbyer"), style = MaterialTheme.typography.titleMedium)
         if (recentLobbies.isEmpty()) {
             Text(
-                "Lobbies you've played in show up here after they end.",
+                tr("Lobbies you've played in show up here after they end.", "Lobbyer du har spelat i visas här när de är slut."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -154,7 +155,7 @@ fun ProfileScreen(
 
         if (recentPlayers.isNotEmpty()) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Recently played with", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Recently played with", "Har spelat med"), style = MaterialTheme.typography.titleMedium)
             recentPlayers.forEach { player ->
                 Row(
                     Modifier.fillMaxWidth(),
@@ -164,11 +165,11 @@ fun ProfileScreen(
                     Text(player.name, modifier = Modifier.weight(1f))
                     if (!user.isGuest) {
                         when (relationTo(player.uid)) {
-                            Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text("Add friend") }
-                            Relation.RequestSent -> Text("Requested", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Relation.None -> TextButton(onClick = { onAddFriend(player) }) { Text(tr("Add friend", "Lägg till vän")) }
+                            Relation.RequestSent -> Text(tr("Requested", "Förfrågan skickad"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Relation.RequestReceived ->
-                                Text("Wants to be friends", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Relation.Friend -> Text("Friend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(tr("Wants to be friends", "Vill bli vän"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Relation.Friend -> Text(tr("Friend", "Vän"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Relation.Self -> Unit
                         }
                     }
@@ -178,7 +179,7 @@ fun ProfileScreen(
 
         if (blockedUsers.isNotEmpty()) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Blocked users", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Blocked users", "Blockerade"), style = MaterialTheme.typography.titleMedium)
             blockedUsers.forEach { blocked ->
                 Row(
                     Modifier.fillMaxWidth(),
@@ -186,14 +187,14 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(blocked.name)
-                    TextButton(onClick = { onUnblock(blocked) }) { Text("Unblock") }
+                    TextButton(onClick = { onUnblock(blocked) }) { Text(tr("Unblock", "Avblockera")) }
                 }
             }
         }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         OutlinedButton(onClick = onSignOut) {
-            Text("Sign out")
+            Text(tr("Sign out", "Logga ut"))
         }
         DeleteAccountButton(user, onDeleteAccount)
     }

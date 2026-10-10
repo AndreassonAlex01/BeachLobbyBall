@@ -26,6 +26,7 @@ import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.auth.SignInMethod
 import se.beachlobbyball.app.auth.validateEmail
 import se.beachlobbyball.app.auth.validatePassword
+import se.beachlobbyball.app.i18n.tr
 
 /** Lets a guest become an account without losing their lobbies and chats. */
 @Composable
@@ -47,7 +48,7 @@ fun GuestUpgradeSection(
             try {
                 action()
             } catch (e: Exception) {
-                error = e.message ?: "Something went wrong"
+                error = e.message ?: tr("Something went wrong", "Något gick fel")
             } finally {
                 busy = false
             }
@@ -55,10 +56,14 @@ fun GuestUpgradeSection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Keep your games", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Keep your games", "Behåll dina matcher"), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Create an account to add friends, get invites and sign in on another phone. " +
-                "Your lobbies and chats come with you.",
+            tr(
+                "Create an account to add friends, get invites and sign in on another phone. " +
+                    "Your lobbies and chats come with you.",
+                "Skapa ett konto för att lägga till vänner, få inbjudningar och logga in på en annan telefon. " +
+                    "Dina lobbyer och chattar följer med.",
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -67,17 +72,17 @@ fun GuestUpgradeSection(
                 onClick = { run(onUpgradeWithGoogle) },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Continue with Google") }
+            ) { Text(tr("Continue with Google", "Fortsätt med Google")) }
         }
         if (!useEmail) {
             OutlinedButton(onClick = { useEmail = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Use email and password")
+                Text(tr("Use email and password", "Använd e-post och lösenord"))
             }
         } else {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text(tr("Email", "E-post")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
@@ -85,7 +90,7 @@ fun GuestUpgradeSection(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(tr("Password", "Lösenord")) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -98,7 +103,7 @@ fun GuestUpgradeSection(
                 },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Create account") }
+            ) { Text(tr("Create account", "Skapa konto")) }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
@@ -114,36 +119,40 @@ fun DeleteAccountButton(user: AppUser, onDelete: suspend (password: String?) -> 
     val scope = rememberCoroutineScope()
 
     TextButton(onClick = { confirming = true }) {
-        Text("Delete account", color = MaterialTheme.colorScheme.error)
+        Text(tr("Delete account", "Radera konto"), color = MaterialTheme.colorScheme.error)
     }
     if (!confirming) return
 
     AlertDialog(
         onDismissRequest = { if (!busy) confirming = false },
-        title = { Text("Delete your account?") },
+        title = { Text(tr("Delete your account?", "Radera ditt konto?")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "This deletes your profile, friends, invites and chat messages, and the lobbies you host. " +
-                        "You leave every other lobby. This can't be undone."
+                    tr(
+                        "This deletes your profile, friends, invites and chat messages, and the lobbies you host. " +
+                            "You leave every other lobby. This can't be undone.",
+                        "Det här raderar din profil, vänner, inbjudningar och chattmeddelanden, och lobbyerna du är värd för. " +
+                            "Du lämnar alla andra lobbyer. Det går inte att ångra.",
+                    )
                 )
                 when (user.method) {
                     SignInMethod.Email -> OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Your password") },
+                        label = { Text(tr("Your password", "Ditt lösenord")) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     SignInMethod.Google -> Text(
-                        "You'll confirm with your Google account first.",
+                        tr("You'll confirm with your Google account first.", "Du bekräftar först med ditt Google-konto."),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SignInMethod.Guest -> Unit
                 }
-                if (busy) Text("Deleting…", style = MaterialTheme.typography.bodySmall)
+                if (busy) Text(tr("Deleting…", "Raderar…"), style = MaterialTheme.typography.bodySmall)
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
@@ -157,16 +166,16 @@ fun DeleteAccountButton(user: AppUser, onDelete: suspend (password: String?) -> 
                         try {
                             onDelete(password.ifEmpty { null })
                         } catch (e: Exception) {
-                            error = e.message ?: "Something went wrong"
+                            error = e.message ?: tr("Something went wrong", "Något gick fel")
                         } finally {
                             busy = false
                         }
                     }
                 },
-            ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            ) { Text(tr("Delete", "Radera"), color = MaterialTheme.colorScheme.error) }
         },
         dismissButton = {
-            TextButton(onClick = { confirming = false }, enabled = !busy) { Text("Cancel") }
+            TextButton(onClick = { confirming = false }, enabled = !busy) { Text(tr("Cancel", "Avbryt")) }
         },
     )
 }

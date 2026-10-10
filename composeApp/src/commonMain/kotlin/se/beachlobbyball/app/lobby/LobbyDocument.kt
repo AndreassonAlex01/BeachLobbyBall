@@ -10,6 +10,7 @@ import se.beachlobbyball.app.model.Mode
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
 import kotlin.time.Duration.Companion.minutes
+import se.beachlobbyball.app.i18n.tr
 
 /** How a lobby is stored in Firestore, in the `lobbies` collection. */
 @Serializable
@@ -58,9 +59,9 @@ fun LobbyDocument.toLobby(id: String) = Lobby(
     isCourtBooked = isCourtBooked,
     courtNumber = courtNumber,
     note = note,
-    players = playerIds.map { Player(it, playerNames[it] ?: "Player") },
+    players = playerIds.map { Player(it, playerNames[it] ?: tr("Player", "Spelare")) },
     joinCode = joinCode,
-    waitlist = waitlistIds.map { Player(it, playerNames[it] ?: "Player") },
+    waitlist = waitlistIds.map { Player(it, playerNames[it] ?: tr("Player", "Spelare")) },
 )
 
 fun Lobby.toDocument() = LobbyDocument(

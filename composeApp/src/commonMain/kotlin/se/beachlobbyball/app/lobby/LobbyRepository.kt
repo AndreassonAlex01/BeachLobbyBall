@@ -14,6 +14,7 @@ import se.beachlobbyball.app.invites.newJoinCode
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
+import se.beachlobbyball.app.i18n.tr
 
 /** Thrown with a message that can be shown to the user as is. */
 class LobbyException(message: String) : Exception(message)
@@ -80,15 +81,19 @@ class LobbyRepository {
         when {
             lobby.hasPlayer(user.uid) -> lobby
             lobby.visibility == Visibility.Private && !hasInvite ->
-                throw LobbyException("This lobby is private. You need an invite or its join code.")
-            !lobby.canJoin(now) && !lobby.canJoinWaitlist(now) -> throw LobbyException("This lobby is closed")
+                throw LobbyException(
+                    tr("This lobby is private. You need an invite or its join code.", "Lobbyn är privat. Du behöver en inbjudan eller dess kod."),
+                )
+            !lobby.canJoin(now) && !lobby.canJoinWaitlist(now) -> throw LobbyException(tr("This lobby is closed", "Lobbyn är stängd"))
             else -> lobby.withJoined(Player(user.uid, user.displayName))
         }
     }
 
     /** Leaves the lobby or its waitlist. */
     suspend fun leave(id: String, uid: String) = change(id) { lobby ->
-        if (lobby.isHost(uid)) throw LobbyException("The host can't leave. Make someone else host, or delete the lobby.")
+        if (lobby.isHost(uid)) throw LobbyException(
+            tr("The host can't leave. Make someone else host, or delete the lobby.", "Värden kan inte lämna. Gör någon annan till värd, eller radera lobbyn."),
+        )
         lobby.without(uid)
     }
 
@@ -123,7 +128,7 @@ class LobbyRepository {
         try {
             firestore.runTransaction {
                 val snapshot = get(ref)
-                if (!snapshot.exists) throw LobbyException("This lobby no longer exists")
+                if (!snapshot.exists) throw LobbyException(tr("This lobby no longer exists", "Lobbyn finns inte längre"))
                 val current = snapshot.toLobby()
                 val updated = transform(current)
                 if (updated != current) set(ref, updated.toDocument())
@@ -133,7 +138,7 @@ class LobbyRepository {
         } catch (e: Exception) {
             // Firestore may wrap exceptions thrown inside the transaction.
             throw generateSequence<Throwable>(e) { it.cause }.filterIsInstance<LobbyException>().firstOrNull()
-                ?: LobbyException("Something went wrong. Check your connection and try again.")
+                ?: LobbyException(tr("Something went wrong. Check your connection and try again.", "Något gick fel. Kolla din uppkoppling och försök igen."))
         }
     }
 

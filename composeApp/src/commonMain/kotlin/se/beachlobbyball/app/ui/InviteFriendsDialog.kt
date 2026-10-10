@@ -36,6 +36,7 @@ import se.beachlobbyball.app.friends.withTag
 import se.beachlobbyball.app.invites.InviteRepository
 import se.beachlobbyball.app.invites.invitableTo
 import se.beachlobbyball.app.model.Lobby
+import se.beachlobbyball.app.i18n.tr
 
 /** Pick friends to invite, one by one or everyone with a tag. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -73,26 +74,26 @@ fun InviteFriendsDialog(
             if (failed == 0) {
                 onDismiss()
             } else {
-                error = "$failed couldn't be sent. Check your connection and try again."
+                error = tr("$failed couldn't be sent. Check your connection and try again.", "$failed kunde inte skickas. Kolla din uppkoppling och försök igen.")
             }
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Invite friends") },
+        title = { Text(tr("Invite friends", "Bjud in vänner")) },
         text = {
             if (candidates.isEmpty()) {
                 Text(
-                    if (friends.isEmpty()) "Add friends on the Friends tab to invite them."
-                    else "All your friends are already in this lobby."
+                    if (friends.isEmpty()) tr("Add friends on the Friends tab to invite them.", "Lägg till vänner under Vänner för att bjuda in dem.")
+                    else tr("All your friends are already in this lobby.", "Alla dina vänner är redan med i lobbyn.")
                 )
             } else Column(
                 Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 if (tags.isNotEmpty()) {
-                    Text("Select everyone tagged", style = MaterialTheme.typography.labelLarge)
+                    Text(tr("Select everyone tagged", "Välj alla med taggen"), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         tags.forEach { tag ->
                             val tagged = candidates.withTag(tag).map { it.uid }.filterNot { it in alreadyInvited }.toSet()
@@ -128,7 +129,7 @@ fun InviteFriendsDialog(
                             }
                         }
                         if (invited) {
-                            Text("Invited", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Invited", "Inbjuden"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -137,9 +138,9 @@ fun InviteFriendsDialog(
         },
         confirmButton = {
             TextButton(onClick = ::send, enabled = selected.isNotEmpty() && !busy) {
-                Text(if (selected.isEmpty()) "Invite" else "Invite ${selected.size}")
+                Text(if (selected.isEmpty()) tr("Invite", "Bjud in") else tr("Invite ${selected.size}", "Bjud in ${selected.size}"))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Close", "Stäng")) } },
     )
 }
