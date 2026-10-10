@@ -3,7 +3,6 @@ package se.beachlobbyball.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,6 +14,7 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import se.beachlobbyball.app.auth.FirebaseAuthRepository
 import se.beachlobbyball.app.auth.Session
+import se.beachlobbyball.app.ui.BeachTheme
 import se.beachlobbyball.app.ui.MainScreen
 import se.beachlobbyball.app.ui.WelcomeScreen
 
@@ -24,7 +24,7 @@ fun App() {
     val session by auth.session.collectAsState(initial = Session.Loading)
     val scope = rememberCoroutineScope()
 
-    MaterialTheme {
+    BeachTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             when (val s = session) {
                 Session.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

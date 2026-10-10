@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="21 21 66 66">
+<defs><clipPath id="ball"><path d="M28,54A26,26 0,1 0,80 54A26,26 0,1 0,28 54Z"/></clipPath></defs>
+<rect x="0" y="0" width="108" height="108" fill="#00658F"/>
+<path fill="#FFFFFF" d="M28,54A26,26 0,1 0,80 54A26,26 0,1 0,28 54Z"/>
+<g clip-path="url(#ball)" fill="none" stroke="#00658F" stroke-width="3" stroke-linecap="round">
+<path d="M54.0,54.0Q45.4,41.7 65.8,28.6"/>
+<path d="M63.8,52.3Q63.3,34.1 76.9,37.9"/>
+<path d="M54.0,54.0Q68.9,52.7 70.1,76.9"/>
+<path d="M50.6,63.4Q66.6,72.0 56.4,81.9"/>
+<path d="M54.0,54.0Q47.7,67.6 26.1,56.4"/>
+<path d="M47.6,46.3Q32.1,55.9 28.6,42.2"/>
+</g></svg>
