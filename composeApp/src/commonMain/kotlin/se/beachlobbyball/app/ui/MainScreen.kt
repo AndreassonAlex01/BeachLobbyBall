@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import se.beachlobbyball.app.auth.AppUser
 
 enum class Tab(val label: String, val icon: ImageVector) {
     PublicLobbies("Public", Icons.Filled.Public),
@@ -32,7 +33,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(user: AppUser, onSignOut: () -> Unit) {
     var selected by rememberSaveable { mutableStateOf(Tab.PublicLobbies) }
 
     Scaffold(
@@ -49,11 +50,15 @@ fun MainScreen() {
             }
         },
     ) { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(selected.label)
+        if (selected == Tab.Profile) {
+            ProfileScreen(user, onSignOut, Modifier.padding(padding))
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(selected.label)
+            }
         }
     }
 }
