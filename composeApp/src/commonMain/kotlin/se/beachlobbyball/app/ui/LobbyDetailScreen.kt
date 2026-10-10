@@ -20,6 +20,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.auth.AppUser
+import se.beachlobbyball.app.chat.ChatRepository
 import se.beachlobbyball.app.lobby.LobbyRepository
 import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.model.Visibility
@@ -53,10 +57,13 @@ fun LobbyDetailScreen(
     lobbyId: String,
     user: AppUser,
     repository: LobbyRepository,
+    chat: ChatRepository,
+    blockedIds: Set<String>,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PlatformBackHandler(onBack = onBack)
+    var showChat by rememberSaveable(lobbyId) { mutableStateOf(false) }
 
     val flow = remember(lobbyId) {
         repository.lobby(lobbyId)
@@ -76,7 +83,17 @@ fun LobbyDetailScreen(
             DetailState.Loading -> Message { CircularProgressIndicator() }
             DetailState.Gone -> Message { Text("This lobby was deleted.") }
             DetailState.Failed -> Message { Text("Couldn't load the lobby. Check your connection.") }
-            is DetailState.Loaded -> LobbyDetails(s.lobby, user, repository, onDeleted = onBack)
+            is DetailState.Loaded -> {
+                TabRow(selectedTabIndex = if (showChat) 1 else 0) {
+                    Tab(selected = !showChat, onClick = { showChat = false }, text = { Text("Details") })
+                    Tab(selected = showChat, onClick = { showChat = true }, text = { Text("Chat") })
+                }
+                if (showChat) {
+                    ChatPanel(s.lobby, user, chat, blockedIds)
+                } else {
+                    LobbyDetails(s.lobby, user, repository, onDeleted = onBack)
+                }
+            }
         }
     }
 }

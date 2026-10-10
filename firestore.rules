@@ -50,6 +50,42 @@ service cloud.firestore {
           && after.toSet() == before.toSet().difference([request.auth.uid].toSet())
           && after.size() == before.size() - 1;
       }
+
+      // Lobby chat. Only players in the lobby can read or write.
+      match /messages/{messageId} {
+        function lobby() {
+          return get(/databases/$(database)/documents/lobbies/$(lobbyId)).data;
+        }
+
+        function isPlayer() {
+          return request.auth != null && request.auth.uid in lobby().playerIds;
+        }
+
+        allow read: if isPlayer();
+
+        allow create: if isPlayer()
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000;
+
+        // Senders can delete their own messages, and the host can delete any.
+        allow delete: if request.auth != null && (
+          resource.data.senderId == request.auth.uid
+          || lobby().hostId == request.auth.uid
+        );
+      }
+    }
+
+    // Reports are write-only from the app. Read them in the Firebase console.
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+        && request.resource.data.reporterId == request.auth.uid;
+    }
+
+    // Each user's block list is private to them.
+    match /users/{uid}/blocked/{blockedUid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
   }
 }

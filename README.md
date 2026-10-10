@@ -19,3 +19,11 @@ Open the folder in Android Studio and run the `composeApp` configuration, or fro
 ```
 
 Every push and pull request builds a debug APK on GitHub Actions. You can download it from the run's artifacts.
+
+## Firestore security rules
+
+The rules live in `firestore.rules`. To test them against Firebase's rules test API (nothing is deployed), sign in with `gcloud auth login` and run:
+
+```
+python3 tools/test_firestore_rules.py
+```

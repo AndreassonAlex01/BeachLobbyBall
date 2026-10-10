@@ -60,8 +60,11 @@ class LobbyRepository {
 
     suspend fun setOpen(id: String, isOpen: Boolean) = change(id) { it.copy(isOpen = isOpen) }
 
+    /** Deletes the lobby and its chat. Firestore doesn't delete subcollections on its own. */
     suspend fun delete(id: String) {
-        lobbies.document(id).delete()
+        val ref = lobbies.document(id)
+        ref.collection("messages").get().documents.forEach { it.reference.delete() }
+        ref.delete()
     }
 
     /** Reads, changes and writes a lobby in one transaction, so two people can't take the last spot. */
