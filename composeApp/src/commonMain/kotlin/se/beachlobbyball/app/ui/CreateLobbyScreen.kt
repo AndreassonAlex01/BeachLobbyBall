@@ -221,6 +221,13 @@ fun CreateLobbyScreen(
         }
 
         SwitchRow("Private (invite only)", isPrivate) { isPrivate = it }
+        if (isPrivate) {
+            Text(
+                "Only friends you invite, or people you give the join code to, can join.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         SwitchRow("Court booked", isCourtBooked) { isCourtBooked = it }
         if (isCourtBooked) {
             OutlinedTextField(

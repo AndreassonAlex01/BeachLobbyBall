@@ -32,6 +32,7 @@ data class LobbyDocument(
     /** Player uids in join order. The host is always first. */
     val playerIds: List<String> = emptyList(),
     val playerNames: Map<String, String> = emptyMap(),
+    val joinCode: String? = null,
 )
 
 fun LobbyDocument.toLobby(id: String) = Lobby(
@@ -53,6 +54,7 @@ fun LobbyDocument.toLobby(id: String) = Lobby(
     courtNumber = courtNumber,
     note = note,
     players = playerIds.map { Player(it, playerNames[it] ?: "Player") },
+    joinCode = joinCode,
 )
 
 fun Lobby.toDocument() = LobbyDocument(
@@ -74,6 +76,7 @@ fun Lobby.toDocument() = LobbyDocument(
     note = note,
     playerIds = players.map { it.uid },
     playerNames = players.associate { it.uid to it.name },
+    joinCode = joinCode,
 )
 
 private inline fun <reified T : Enum<T>> enumOrNull(name: String): T? =
