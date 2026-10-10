@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import se.beachlobbyball.app.auth.AuthRepository
+import se.beachlobbyball.app.auth.GoogleIdTokenSource
 import se.beachlobbyball.app.auth.validateEmail
 import se.beachlobbyball.app.auth.validateName
 import se.beachlobbyball.app.auth.validatePassword
@@ -46,6 +47,21 @@ fun WelcomeScreen(auth: AuthRepository) {
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val google = rememberGoogleIdTokenSource()
+
+    fun signInWithGoogle(source: GoogleIdTokenSource) {
+        error = null
+        busy = true
+        scope.launch {
+            try {
+                source.requestIdToken()?.let { auth.signInWithGoogle(it) }
+            } catch (e: Exception) {
+                error = e.message
+            } finally {
+                busy = false
+            }
+        }
+    }
 
     fun submit() {
         error = when (mode) {
@@ -89,7 +105,16 @@ fun WelcomeScreen(auth: AuthRepository) {
         Spacer(Modifier.height(16.dp))
 
         if (mode == WelcomeMode.Choose) {
-            Button(onClick = { mode = WelcomeMode.SignIn }, modifier = Modifier.fillMaxWidth()) {
+            if (google != null) {
+                Button(
+                    onClick = { signInWithGoogle(google) },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Continue with Google")
+                }
+            }
+            OutlinedButton(onClick = { mode = WelcomeMode.SignIn }, modifier = Modifier.fillMaxWidth()) {
                 Text("Sign in with email")
             }
             OutlinedButton(
@@ -98,6 +123,7 @@ fun WelcomeScreen(auth: AuthRepository) {
             ) {
                 Text("Create account")
             }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             TextButton(onClick = { mode = WelcomeMode.Guest }) {
                 Text("Continue as guest")

@@ -24,6 +24,9 @@ interface AuthRepository {
 
     suspend fun createAccount(name: String, email: String, password: String)
 
+    /** Signs in with an ID token from the platform's Google account picker. */
+    suspend fun signInWithGoogle(idToken: String)
+
     /** Changes the name shown in lobbies and chat. */
     suspend fun updateName(name: String)
 

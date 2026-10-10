@@ -30,14 +30,19 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import se.beachlobbyball.app.auth.AppUser
 import se.beachlobbyball.app.auth.AuthRepository
 import se.beachlobbyball.app.chat.ChatRepository
 import se.beachlobbyball.app.friends.Friend
 import se.beachlobbyball.app.friends.FriendRequest
 import se.beachlobbyball.app.friends.FriendsRepository
+import se.beachlobbyball.app.friends.Relation
 import se.beachlobbyball.app.friends.relationTo
 import se.beachlobbyball.app.lobby.LobbyRepository
+import se.beachlobbyball.app.lobby.recentlyJoined
+import se.beachlobbyball.app.lobby.recentlyPlayedWith
+import se.beachlobbyball.app.model.Player
 import se.beachlobbyball.app.model.Visibility
 import se.beachlobbyball.app.profile.ProfileRepository
 
@@ -76,6 +81,10 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
     val myPrivateLobbies = remember(user.uid) {
         lobbies.lobbiesWithPlayer(user.uid).map { list -> list.filter { it.visibility == Visibility.Private } }
     }
+    val myLobbies = lobbies.lobbiesWithPlayer(user.uid).collectOr(emptyList(), user.uid)
+    val now = Clock.System.now()
+    val recentLobbies = myLobbies.recentlyJoined(now)
+    val recentPlayers = myLobbies.recentlyPlayedWith(user.uid, now)
     val blockedUsers = chat.blockedUsers(user.uid).collectOr(emptyList(), user.uid)
     val blockedIds = remember(blockedUsers) { blockedUsers.map { it.uid }.toSet() }
     val profile = profiles.profile(user.uid).collectOr(null, user.uid)
@@ -87,6 +96,11 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
         .collectOr(emptyList(), user.uid)
     val outgoing = (if (user.isGuest) flowOf(emptyList<FriendRequest>()) else friendsRepository.outgoingRequests(user.uid))
         .collectOr(emptyList(), user.uid)
+
+    val relation: (String) -> Relation = { uid -> relationTo(uid, user.uid, friends, incoming, outgoing) }
+    val addFriend: (Player) -> Unit = { player ->
+        scope.launch { runCatching { friendsRepository.sendRequest(user, player.uid, player.name) } }
+    }
 
     Scaffold(
         bottomBar = {
@@ -122,10 +136,8 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                 repository = lobbies,
                 chat = chat,
                 blockedIds = blockedIds,
-                relationTo = { uid -> relationTo(uid, user.uid, friends, incoming, outgoing) },
-                onAddFriend = { player ->
-                    scope.launch { runCatching { friendsRepository.sendRequest(user, player.uid, player.name) } }
-                },
+                relationTo = relation,
+                onAddFriend = addFriend,
                 onBack = { openLobbyId = null },
                 modifier = content,
             )
@@ -162,6 +174,11 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
             MainTab.Profile -> ProfileScreen(
                 user = user,
                 profile = profile,
+                recentLobbies = recentLobbies,
+                recentPlayers = recentPlayers,
+                relationTo = relation,
+                onOpenLobby = { openLobbyId = it },
+                onAddFriend = addFriend,
                 blockedUsers = blockedUsers,
                 onSave = { edited ->
                     if (edited.name != user.displayName) auth.updateName(edited.name)
