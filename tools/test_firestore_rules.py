@@ -13,9 +13,18 @@ base = {"hostId": "h", "hostName": "Host", "isOpen": True, "maxPlayers": 3, "vis
         "playerIds": ["h", "p1"], "playerNames": {"h": "Host", "p1": "P1"}}
 def lobby(**kw):
     d = dict(base); d.update(kw); return d
+def ACCOUNT(uid, email=None):
+    token = {"firebase": {"sign_in_provider": "password"}}
+    if email: token["email"] = email
+    return {"uid": uid, "token": token}
+def GUEST(uid):
+    return {"uid": uid, "token": {"firebase": {"sign_in_provider": "anonymous"}}}
+def EXISTS(result):
+    return [{"function": "exists", "args": [{"anyValue": {}}], "result": {"value": result}}]
 def case(name, expect, uid, path, method, resource=None, new=None, mocks=None):
     req = {"path": D + path, "method": method}
-    if uid: req["auth"] = {"uid": uid}
+    if isinstance(uid, dict): req["auth"] = uid
+    elif uid: req["auth"] = {"uid": uid, "token": {"firebase": {"sign_in_provider": "password"}}}
     if new is not None: req["resource"] = {"data": new}
     tc = {"expectation": expect, "request": req}
     if resource is not None: tc["resource"] = {"data": resource}
@@ -58,6 +67,54 @@ cases = [
     case("read reports", "DENY", "p1", "/reports/r", "get", resource={"reporterId": "p1"}),
     case("own block list", "ALLOW", "p1", "/users/p1/blocked/p2", "create", new={"name": "P2"}),
     case("others block list", "DENY", "p1", "/users/p2/blocked/p1", "get", resource={"name": "P1"}),
+
+    # Profiles and email lookup. Accounts sign in with a password; guests are anonymous.
+    case("account saves own profile", "ALLOW", ACCOUNT("a"), "/profiles/a", "create",
+         new={"name": "Alex", "nameLower": "alex"}),
+    case("profile with wrong nameLower", "DENY", ACCOUNT("a"), "/profiles/a", "create",
+         new={"name": "Alex", "nameLower": "x"}),
+    case("guest creates profile", "DENY", GUEST("g"), "/profiles/g", "create",
+         new={"name": "Gus", "nameLower": "gus"}),
+    case("edit someone else's profile", "DENY", ACCOUNT("a"), "/profiles/b", "update",
+         resource={"name": "B", "nameLower": "b"}, new={"name": "X", "nameLower": "x"}),
+    case("search profiles", "ALLOW", ACCOUNT("a"), "/profiles/b", "list", resource={"name": "B", "nameLower": "b"}),
+    case("claim own email", "ALLOW", ACCOUNT("a", "Alex@Example.se"), "/emailIndex/alex@example.se", "create",
+         new={"uid": "a"}),
+    case("claim someone else's email", "DENY", ACCOUNT("a", "alex@example.se"), "/emailIndex/sam@example.se",
+         "create", new={"uid": "a"}),
+    case("look up exact email", "ALLOW", ACCOUNT("b"), "/emailIndex/alex@example.se", "get", resource={"uid": "a"}),
+    case("list all emails", "DENY", ACCOUNT("b"), "/emailIndex/alex@example.se", "list", resource={"uid": "a"}),
+
+    # Friend requests and friend lists.
+    case("send request", "ALLOW", ACCOUNT("a"), "/friendRequests/a_b", "create",
+         new={"fromId": "a", "toId": "b"}),
+    case("send request as someone else", "DENY", ACCOUNT("a"), "/friendRequests/c_b", "create",
+         new={"fromId": "c", "toId": "b"}),
+    case("guest sends request", "DENY", GUEST("g"), "/friendRequests/g_b", "create",
+         new={"fromId": "g", "toId": "b"}),
+    case("request to self", "DENY", ACCOUNT("a"), "/friendRequests/a_a", "create",
+         new={"fromId": "a", "toId": "a"}),
+    case("receiver reads request", "ALLOW", ACCOUNT("b"), "/friendRequests/a_b", "get",
+         resource={"fromId": "a", "toId": "b"}),
+    case("stranger reads request", "DENY", ACCOUNT("c"), "/friendRequests/a_b", "get",
+         resource={"fromId": "a", "toId": "b"}),
+    case("accepter adds sender to own list", "ALLOW", ACCOUNT("b"), "/users/b/friends/a", "create",
+         new={"name": "A", "tags": []}, mocks=EXISTS(True)),
+    case("accepter adds self to sender's list", "ALLOW", ACCOUNT("b"), "/users/a/friends/b", "create",
+         new={"name": "B", "tags": []}, mocks=EXISTS(True)),
+    case("accepter tags themselves in sender's list", "DENY", ACCOUNT("b"), "/users/a/friends/b", "create",
+         new={"name": "B", "tags": ["Best"]}, mocks=EXISTS(True)),
+    case("befriend without a request", "DENY", ACCOUNT("b"), "/users/b/friends/a", "create",
+         new={"name": "A", "tags": []}, mocks=EXISTS(False)),
+    case("write into a stranger's list", "DENY", ACCOUNT("c"), "/users/a/friends/b", "create",
+         new={"name": "B", "tags": []}, mocks=EXISTS(True)),
+    case("read own friends", "ALLOW", ACCOUNT("a"), "/users/a/friends/b", "get", resource={"name": "B", "tags": []}),
+    case("read someone's tags", "DENY", ACCOUNT("b"), "/users/a/friends/b", "get",
+         resource={"name": "B", "tags": ["Mixed"]}),
+    case("friend edits my tags", "DENY", ACCOUNT("b"), "/users/a/friends/b", "update",
+         resource={"name": "B", "tags": []}, new={"name": "B", "tags": ["x"]}),
+    case("unfriend from either side", "ALLOW", ACCOUNT("b"), "/users/a/friends/b", "delete",
+         resource={"name": "B", "tags": []}),
 ]
 
 env = {k: v for k, v in os.environ.items() if k != "CLOUDSDK_AUTH_ACCESS_TOKEN"}
