@@ -1,0 +1,7 @@
+{
+  "hosting": {
+    "site": "beachlobbyball",
+    "public": "site",
+    "cleanUrls": true
+  }
+}

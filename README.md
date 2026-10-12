@@ -44,3 +44,11 @@ Every push to `main` also runs the "Release build" workflow, which builds a sign
 - `UPLOAD_KEYSTORE_PASSWORD`: its password (the key alias is `upload`)
 
 Without them the workflow skips the build. Google Play re-signs the app with its own app signing key, so add that key's SHA-1 and SHA-256 (Play Console > Test and release > App integrity) to the Firebase Android app, or Google sign-in won't work in Play builds.
+
+## Website
+
+`site/` holds the pages Google Play links to: the privacy policy and the account deletion page. They're served by Firebase Hosting at <https://beachlobbyball.web.app> (`/privacy` and `/delete-account`). To publish changes, sign in with `gcloud auth login` and run:
+
+```
+python3 tools/deploy_site.py
+```
