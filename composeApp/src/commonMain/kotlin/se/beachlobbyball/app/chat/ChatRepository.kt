@@ -12,7 +12,8 @@ import se.beachlobbyball.app.auth.AppUser
 private const val MESSAGE_LIMIT = 200
 
 class ChatRepository {
-    private val firestore = Firebase.firestore
+    // Lazy, so screens can be built in screenshot tests without a Firebase app.
+    private val firestore by lazy { Firebase.firestore }
 
     private fun messages(lobbyId: String) =
         firestore.collection("lobbies").document(lobbyId).collection("messages")

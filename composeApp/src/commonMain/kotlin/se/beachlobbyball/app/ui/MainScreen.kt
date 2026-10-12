@@ -118,32 +118,20 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                MainTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = tab == selected && openLobbyId == null,
-                        onClick = {
-                            selected = tab
-                            openLobbyId = null
-                        },
-                        icon = {
-                            val count = when (tab) {
-                                MainTab.Friends -> incoming.size
-                                MainTab.PrivateLobbies -> pendingInvites.size
-                                else -> 0
-                            }
-                            if (count > 0) {
-                                BadgedBox(badge = { Badge { Text("$count") } }) {
-                                    Icon(tab.icon, contentDescription = tab.label)
-                                }
-                            } else {
-                                Icon(tab.icon, contentDescription = tab.label)
-                            }
-                        },
-                        label = { Text(tab.label) },
-                    )
-                }
-            }
+            MainNavigationBar(
+                selected = selected.takeIf { openLobbyId == null },
+                badgeCount = { tab ->
+                    when (tab) {
+                        MainTab.Friends -> incoming.size
+                        MainTab.PrivateLobbies -> pendingInvites.size
+                        else -> 0
+                    }
+                },
+                onSelect = { tab ->
+                    selected = tab
+                    openLobbyId = null
+                },
+            )
         },
     ) { padding ->
         val content = Modifier.padding(padding)
@@ -218,6 +206,30 @@ fun MainScreen(user: AppUser, auth: AuthRepository, onSignOut: () -> Unit) {
                 onDeleteAccount = { password -> deleteAccount(user, password, auth, accountData, google) },
                 onSignOut = onSignOut,
                 modifier = content,
+            )
+        }
+    }
+}
+
+/** The tab bar along the bottom. No tab is highlighted while a lobby is open. */
+@Composable
+internal fun MainNavigationBar(selected: MainTab?, badgeCount: (MainTab) -> Int, onSelect: (MainTab) -> Unit) {
+    NavigationBar {
+        MainTab.entries.forEach { tab ->
+            NavigationBarItem(
+                selected = tab == selected,
+                onClick = { onSelect(tab) },
+                icon = {
+                    val count = badgeCount(tab)
+                    if (count > 0) {
+                        BadgedBox(badge = { Badge { Text("$count") } }) {
+                            Icon(tab.icon, contentDescription = tab.label)
+                        }
+                    } else {
+                        Icon(tab.icon, contentDescription = tab.label)
+                    }
+                },
+                label = { Text(tab.label) },
             )
         }
     }

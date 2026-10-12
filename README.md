@@ -24,6 +24,10 @@ The latest debug APK of `main` is always at
 <https://github.com/AndreassonAlex01/BeachLobbyBall/releases/download/test-build/beachlobbyball-test.apk>,
 ready to install on a phone.
 
+## Store screenshots
+
+`StoreScreenshots` (in `composeApp/src/androidUnitTest`) renders the real screens with sample data, in English and Swedish, using Robolectric and Roborazzi. The "Store screenshots" workflow saves them to the [`store-screenshots`](https://github.com/AndreassonAlex01/BeachLobbyBall/tree/store-screenshots) branch on every push to `main`, ready to upload to Google Play.
+
 ## Firestore security rules
 
 The rules live in `firestore.rules`. To test them against Firebase's rules test API (nothing is deployed), sign in with `gcloud auth login` and run:

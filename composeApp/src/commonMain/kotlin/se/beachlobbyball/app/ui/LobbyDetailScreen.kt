@@ -39,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import se.beachlobbyball.app.auth.AppUser
+import se.beachlobbyball.app.chat.ChatMessage
 import se.beachlobbyball.app.chat.ChatRepository
 import se.beachlobbyball.app.friends.Friend
 import se.beachlobbyball.app.friends.Relation
@@ -62,6 +64,10 @@ private sealed interface DetailState {
     data object Failed : DetailState
 }
 
+/**
+ * [lobbySource] and [chatMessages] default to live Firestore data. Screenshot tests pass their own,
+ * and [startOnChat] to open on the chat tab.
+ */
 @Composable
 fun LobbyDetailScreen(
     lobbyId: String,
@@ -76,12 +82,15 @@ fun LobbyDetailScreen(
     onAddFriend: (Player) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    lobbySource: Flow<Lobby?> = remember(lobbyId) { repository.lobby(lobbyId) },
+    chatMessages: Flow<List<ChatMessage>> = remember(lobbyId) { chat.messagesIn(lobbyId) },
+    startOnChat: Boolean = false,
 ) {
     PlatformBackHandler(onBack = onBack)
-    var showChat by rememberSaveable(lobbyId) { mutableStateOf(false) }
+    var showChat by rememberSaveable(lobbyId) { mutableStateOf(startOnChat) }
 
-    val flow = remember(lobbyId) {
-        repository.lobby(lobbyId)
+    val flow = remember(lobbySource) {
+        lobbySource
             .map<Lobby?, DetailState> { if (it == null) DetailState.Gone else DetailState.Loaded(it) }
             .catch { emit(DetailState.Failed) }
     }
@@ -104,7 +113,7 @@ fun LobbyDetailScreen(
                     Tab(selected = showChat, onClick = { showChat = true }, text = { Text(tr("Chat", "Chatt")) })
                 }
                 if (showChat) {
-                    ChatPanel(s.lobby, user, chat, blockedIds)
+                    ChatPanel(s.lobby, user, chat, blockedIds, chatMessages)
                 } else {
                     LobbyDetails(
                         lobby = s.lobby,

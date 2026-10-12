@@ -8,8 +8,9 @@ import kotlinx.datetime.Clock
 import se.beachlobbyball.app.auth.AppUser
 
 class FriendsRepository {
-    private val firestore = Firebase.firestore
-    private val requests = firestore.collection("friendRequests")
+    // Lazy, so screens can be built in screenshot tests without a Firebase app.
+    private val firestore by lazy { Firebase.firestore }
+    private val requests by lazy { firestore.collection("friendRequests") }
 
     private fun friendsOf(uid: String) = firestore.collection("users").document(uid).collection("friends")
 
