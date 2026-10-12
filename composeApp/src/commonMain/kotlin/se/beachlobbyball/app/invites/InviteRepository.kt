@@ -12,9 +12,10 @@ import se.beachlobbyball.app.model.Lobby
 import se.beachlobbyball.app.i18n.tr
 
 class InviteRepository {
-    private val firestore = Firebase.firestore
-    private val invites = firestore.collection("invites")
-    private val codes = firestore.collection("lobbyCodes")
+    // Lazy, so screens can be built in screenshot tests without a Firebase app.
+    private val firestore by lazy { Firebase.firestore }
+    private val invites by lazy { firestore.collection("invites") }
+    private val codes by lazy { firestore.collection("lobbyCodes") }
 
     /** Invites to [uid], including ones they made with a join code. */
     fun incoming(uid: String): Flow<List<Invite>> =

@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -57,8 +58,15 @@ private sealed interface ChatState {
     data object Failed : ChatState
 }
 
+/** [messages] defaults to the lobby's chat in Firestore. Screenshot tests pass their own. */
 @Composable
-fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set<String>) {
+fun ChatPanel(
+    lobby: Lobby,
+    user: AppUser,
+    chat: ChatRepository,
+    blockedIds: Set<String>,
+    messages: Flow<List<ChatMessage>> = remember(lobby.id) { chat.messagesIn(lobby.id) },
+) {
     if (!lobby.hasPlayer(user.uid)) {
         Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(tr("Join the lobby to see and send messages.", "Gå med i lobbyn för att se och skicka meddelanden."), textAlign = TextAlign.Center)
@@ -66,8 +74,8 @@ fun ChatPanel(lobby: Lobby, user: AppUser, chat: ChatRepository, blockedIds: Set
         return
     }
 
-    val flow = remember(lobby.id) {
-        chat.messagesIn(lobby.id)
+    val flow = remember(messages) {
+        messages
             .map<List<ChatMessage>, ChatState> { ChatState.Loaded(it) }
             .catch { emit(ChatState.Failed) }
     }

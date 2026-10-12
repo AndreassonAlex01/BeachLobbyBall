@@ -12,9 +12,10 @@ private const val SEARCH_LIMIT = 20
 private const val SEARCH_END = "\uf8ff"
 
 class ProfileRepository {
-    private val firestore = Firebase.firestore
-    private val profiles = firestore.collection("profiles")
-    private val emailIndex = firestore.collection("emailIndex")
+    // Lazy, so screens can be built in screenshot tests without a Firebase app.
+    private val firestore by lazy { Firebase.firestore }
+    private val profiles by lazy { firestore.collection("profiles") }
+    private val emailIndex by lazy { firestore.collection("emailIndex") }
 
     fun profile(uid: String): Flow<Profile?> =
         profiles.document(uid).snapshots.map {

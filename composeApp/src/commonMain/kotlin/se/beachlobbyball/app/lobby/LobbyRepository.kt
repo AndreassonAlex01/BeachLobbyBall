@@ -20,10 +20,11 @@ import se.beachlobbyball.app.i18n.tr
 class LobbyException(message: String) : Exception(message)
 
 class LobbyRepository {
-    private val firestore = Firebase.firestore
-    private val lobbies = firestore.collection("lobbies")
-    private val codes = firestore.collection("lobbyCodes")
-    private val invites = firestore.collection("invites")
+    // Lazy, so screens can be built in screenshot tests without a Firebase app.
+    private val firestore by lazy { Firebase.firestore }
+    private val lobbies by lazy { firestore.collection("lobbies") }
+    private val codes by lazy { firestore.collection("lobbyCodes") }
+    private val invites by lazy { firestore.collection("invites") }
 
     /** All public lobbies, including ones that have ended. Filter and sort in the UI. */
     fun publicLobbies(): Flow<List<Lobby>> =

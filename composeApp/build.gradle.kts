@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.googleServices)
+    alias(libs.plugins.roborazzi)
 }
 
 kotlin {
@@ -40,6 +41,17 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        // Screenshot tests: Robolectric renders the real screens and Roborazzi saves them as images.
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.robolectric)
+                implementation(libs.roborazzi)
+                implementation(libs.roborazzi.compose)
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.compose.ui.test.junit4)
+            }
         }
     }
 }
@@ -85,4 +97,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+dependencies {
+    // Gives screenshot tests an activity to render in.
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

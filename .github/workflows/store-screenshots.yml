@@ -1,0 +1,42 @@
+name: Store screenshots
+
+# Renders the Google Play screenshots from the real screens with sample data
+# (composeApp/src/androidUnitTest/.../StoreScreenshots.kt) and pushes them to the
+# store-screenshots branch, in en/ and sv/ folders.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'composeApp/src/commonMain/kotlin/se/beachlobbyball/app/ui/**'
+      - 'composeApp/src/androidUnitTest/**'
+      - '.github/workflows/store-screenshots.yml'
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Render screenshots
+        run: ./gradlew :composeApp:testDebugUnitTest --tests '*StoreScreenshots*' -Proborazzi.test.record=true
+      - name: Push them to the store-screenshots branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out="$RUNNER_TEMP/store-screenshots"
+          mkdir -p "$out"
+          cp -r composeApp/build/store-screenshots/. "$out/"
+          cd "$out"
+          git init -q -b store-screenshots
+          git add .
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Store screenshots from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" store-screenshots
