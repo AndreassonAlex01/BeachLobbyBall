@@ -44,3 +44,7 @@ Every push to `main` also runs the "Release build" workflow, which builds a sign
 - `UPLOAD_KEYSTORE_PASSWORD`: its password (the key alias is `upload`)
 
 Without them the workflow skips the build. Google Play re-signs the app with its own app signing key, so add that key's SHA-1 and SHA-256 (Play Console > Test and release > App integrity) to the Firebase Android app, or Google sign-in won't work in Play builds.
+
+## Google Play listing
+
+The store text is in `store/listing/` (English and Swedish), with the icon and feature graphic in `store/`. `tools/play_store.py` publishes the listing, uploads app bundles to a track and sets testers, through the Play Developer API as the `play-publisher` service account. That account has to be invited in Play Console under Users and permissions. Run `python3 tools/play_store.py --help` for the commands.
